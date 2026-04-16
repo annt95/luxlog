@@ -7,6 +7,7 @@ import 'package:luxlog/features/gallery/presentation/photo_detail_screen.dart';
 import 'package:luxlog/features/gallery/presentation/upload_screen.dart';
 import 'package:luxlog/features/portfolio/presentation/portfolio_screen.dart';
 import 'package:luxlog/features/portfolio/presentation/portfolio_editor_screen.dart';
+import 'package:luxlog/features/portfolio/presentation/public_portfolio_screen.dart';
 import 'package:luxlog/features/profile/presentation/profile_screen.dart';
 import 'package:luxlog/features/explore/presentation/explore_screen.dart';
 import 'package:luxlog/features/notifications/presentation/notifications_screen.dart';
@@ -104,6 +105,15 @@ final router = GoRouter(
       path: '/notifications',
       name: 'notifications',
       builder: (context, state) => const NotificationsScreen(),
+    ),
+
+    // ── Public Portfolio ──────────────────────────────────────
+    GoRoute(
+      path: '/p/:slug',
+      name: 'public-portfolio',
+      builder: (context, state) => PublicPortfolioScreen(
+        slug: state.pathParameters['slug']!,
+      ),
     ),
   ],
 

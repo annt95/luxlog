@@ -89,7 +89,7 @@ class _NotificationTile extends StatelessWidget {
                 children: [
                   RichText(
                     text: TextSpan(
-                      style: AppTextStyles.bodyText,
+                      style: AppTextStyles.body,
                       children: [
                         TextSpan(
                           text: 'sarah_lens ',

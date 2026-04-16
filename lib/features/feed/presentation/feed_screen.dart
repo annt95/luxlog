@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/features/gallery/presentation/widgets/comment_bottom_sheet.dart';
 
 /// Module 2: Social Feed — Instagram-like following feed
 class FeedScreen extends StatefulWidget {
@@ -38,6 +39,8 @@ class _FeedScreenState extends State<FeedScreen> {
     aspect: [4 / 3.0, 1.0, 4 / 5.0, 16 / 9.0, 3 / 4.0][i % 5],
   ));
 
+  int _selectedTab = 0; // 0: For You, 1: Following
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -46,6 +49,10 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final displayPosts = _selectedTab == 0
+        ? _posts
+        : _posts.where((p) => p.isLiked).toList(); // Mock filtering for Following
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
@@ -54,7 +61,10 @@ class _FeedScreenState extends State<FeedScreen> {
           // AppBar
           SliverPersistentHeader(
             pinned: true,
-            delegate: _FeedAppBarDelegate(),
+            delegate: _FeedAppBarDelegate(
+              tabIndex: _selectedTab,
+              onTabChanged: (i) => setState(() => _selectedTab = i),
+            ),
           ),
 
           // Stories row
@@ -69,10 +79,16 @@ class _FeedScreenState extends State<FeedScreen> {
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, i) {
-                if (i >= _posts.length) return _LoadingIndicator();
-                return _PostCard(post: _posts[i]);
+                if (displayPosts.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(40),
+                    child: Center(child: Text("No posts found. Start following someone!", style: TextStyle(color: Colors.grey))),
+                  );
+                }
+                if (i >= displayPosts.length) return _LoadingIndicator();
+                return _PostCard(key: ValueKey(displayPosts[i].id), post: displayPosts[i]);
               },
-              childCount: _posts.length + 1,
+              childCount: displayPosts.isEmpty ? 1 : displayPosts.length + 1,
             ),
           ),
 
@@ -112,6 +128,11 @@ class _MockPost {
 // ── Feed AppBar ───────────────────────────────────────────────────────────────
 
 class _FeedAppBarDelegate extends SliverPersistentHeaderDelegate {
+  final int tabIndex;
+  final ValueChanged<int> onTabChanged;
+
+  _FeedAppBarDelegate({required this.tabIndex, required this.onTabChanged});
+
   @override
   double get minExtent => 56;
   @override
@@ -135,7 +156,9 @@ class _FeedAppBarDelegate extends SliverPersistentHeaderDelegate {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  Text('Feed', style: AppTextStyles.sectionHeader),
+                  _TabItem(title: 'For You', isSelected: tabIndex == 0, onTap: () => onTabChanged(0)),
+                  const SizedBox(width: 20),
+                  _TabItem(title: 'Following', isSelected: tabIndex == 1, onTap: () => onTabChanged(1)),
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.favorite_border, size: 22),
@@ -157,7 +180,41 @@ class _FeedAppBarDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(covariant _FeedAppBarDelegate oldDelegate) => false;
+  bool shouldRebuild(covariant _FeedAppBarDelegate oldDelegate) =>
+      tabIndex != oldDelegate.tabIndex;
+}
+
+class _TabItem extends StatelessWidget {
+  final String title;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _TabItem({required this.title, required this.isSelected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: isSelected ? AppColors.primary : Colors.transparent,
+              width: 2,
+            ),
+          ),
+        ),
+        child: Text(
+          title,
+          style: AppTextStyles.titleMedium.copyWith(
+            color: isSelected ? AppColors.onSurface : AppColors.onSurfaceVariant,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ── Stories Row ───────────────────────────────────────────────────────────────
@@ -260,7 +317,7 @@ class _StoryBubble extends StatelessWidget {
 
 class _PostCard extends StatefulWidget {
   final _MockPost post;
-  const _PostCard({required this.post});
+  const _PostCard({super.key, required this.post});
 
   @override
   State<_PostCard> createState() => _PostCardState();
@@ -328,6 +385,14 @@ class _PostCardState extends State<_PostCard> {
             likeCount: _likes,
             commentCount: widget.post.comments,
             onLike: _toggleLike,
+            onComment: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => CommentBottomSheet(photoId: widget.post.id),
+              );
+            },
           ),
 
           // ── Caption ────────────────────────────────────
@@ -428,12 +493,14 @@ class _PostActions extends StatelessWidget {
   final int likeCount;
   final int commentCount;
   final VoidCallback onLike;
+  final VoidCallback onComment;
 
   const _PostActions({
     required this.liked,
     required this.likeCount,
     required this.commentCount,
     required this.onLike,
+    required this.onComment,
   });
 
   @override
@@ -452,7 +519,7 @@ class _PostActions extends StatelessWidget {
             icon: Icons.chat_bubble_outline,
             color: AppColors.onSurface,
             label: _fmt(commentCount),
-            onTap: () {},
+            onTap: onComment,
           ),
           _ActionBtn(
             icon: Icons.send_outlined,

@@ -1,65 +1,48 @@
-# Luxlog — Photography Platform Implementation Plan
+# Luxlog — Phase 4: Social & Portfolio Frontend Logic
 
-Cập nhật tiến độ dự án Luxlog (trước đây là VibeShot). Dự án đang được xây dựng trên Flutter Web/Mobile với thiết kế **"The Darkroom Editorial"**.
+Kế hoạch này nhằm xây dựng hoàn thiện toàn bộ **Logic Frontend (UI State)** cho mạng xã hội Nhiếp ảnh Luxlog, để các chức năng này ở trạng thái sẵn sàng "Plug-and-play" với Backend API sau này. 
 
-## Mục tiêu hiện tại
-Cập nhật kế hoạch để phản ánh những phần giao diện (UI) đã hoàn thành xuất sắc trong Phase 1 & Phase 2, và vạch ra lộ trình tích hợp hệ thống Backend (Supabase) cùng hoàn thiện luồng Logic cho Phase 3 & Phase 4.
+## 🎯 Mục tiêu
+- Biến các nút bấm (Follow, Comment) bị "chết" hiện tại thành các luồng tương tác thực thụ trên màn hình.
+- Nâng cấp màn hình Feed có khả năng chia luồng (For You / Following).
+- Thêm màn hình Public Portfolio phục vụ cho tính năng chia sẻ link.
 
+---
+
+## 🛠 Proposed Changes (Implementation Tasks)
+
+### 1. Feed Screen Tabs ("For You" vs "Following")
+Thay thế tiêu đề `Feed` tĩnh bằng hệ thống Tab Bar.
+#### [MODIFY] `lib/features/feed/presentation/feed_screen.dart`
+- Thêm `TabBar` vào `_FeedAppBarDelegate`.
+- Phân chia `SliverList` thành 2 page của `TabBarView` (Mock tách biệt 2 mảng danh sách post khác nhau để mô phỏng).
+
+### 2. Comments Bottom Sheet Flow
+Giao diện List Comment nên được hiển thị dưới dạng Bottom Sheet vuốt từ dưới lên khi người dùng nhấn vào nút Comment, giữ cho họ không bị chuyển cảnh màn hình đột ngột.
+#### [NEW] `lib/features/gallery/presentation/widgets/comment_bottom_sheet.dart`
+- Chứa ListView danh sách comment và thanh TextFormField ở dưới cùng kèm bàn phím ảo.
+#### [MODIFY] `feed_screen.dart` và `photo_detail_screen.dart`
+- Xác định sự kiện `onTap` của icon `chat_bubble_outline`.
+- Gọi hàm `showModalBottomSheet(context: context, builder: (_) => CommentBottomSheet())`.
+
+### 3. Logic Follow / Unfollow (Optimistic UI)
+Người dùng mong muốn thấy nút Follow phản hồi ngay lập tức thay vì đợi API Load.
+#### [NEW] `lib/features/profile/providers/follow_state_provider.dart`
+- Tạo StateNotifierProvider tạm thời quản lý danh sách ID người dùng đang follow.
+#### [MODIFY] `lib/features/profile/presentation/profile_screen.dart`
+- Gắn biến `_isFollowing` theo dõi qua Provider thay vì Local State để đồng nhất toàn app.
+
+### 4. Màn hình Public Portfolio View
+Đây là màn hình sinh ra khi Photographer cấu hình xong Portfolio ở Editor và chia sẻ link web cho người khác.
+#### [NEW] `lib/features/portfolio/presentation/public_portfolio_screen.dart`
+- Load thiết kế masonry hoặc grid tùy theo block đã được sinh ra. Trang này là Read-Only (Không có icon Edit / Setting).
+#### [MODIFY] `lib/app/router.dart`
+- Bổ sung Route `GoRoute(path: '/p/:slug')` để render màn Public Portfolio.
+
+---
+
+## ⚠️ Open Questions (User Review Required)
 > [!IMPORTANT]
-> **User Review Required**: Kế hoạch này chuyển trọng tâm từ việc thiết kế UI thuần sang việc tích hợp dữ liệu thật. Xin đánh giá mức độ ưu tiên: Bạn muốn làm Hệ thống Đăng nhập & Data trước hay làm nốt các Màn hình (Ví dụ: Public Portfolio & Notifications) trước?
-
----
-
-## 🟢 Những gì đã hoàn thành (Phase 1 & 2 UI/UX)
-- **Tech Stack**: Đã thiết lập Flutter 3.41, Riverpod 2, GoRouter. Triển khai CI/CD Web lên Vercel.
-- **Design System**: Thống nhất `theme.dart`, CSS variables, color (Vintage Gold/Charcoal), Typography, Glassmorphism.
-- **UI Module Gallery / Feed**: Màn hình Social Feed (Instagram-like con), Photo Detail, Upload màn (cùng parse EXIF thật).
-- **UI Module Explore / Discover**: Màn hình Discover Masonry, Explore Search.
-- **UI Module Portfolio / Profile**: Màn hình Dashboard, Portfolio Editor (drag&drop blocks), và Profile Cá nhân.
-
----
-
-## 🟡 Những gì còn thiếu (Cần triển khai)
-
-### 1. Tích hợp Backend (Supabase)
-> Tầng tảng thiết yếu để ứng dụng có thể lưu trữ và hoạt động thực.
-- **Xác thực (Auth)**:
-  - Gắn Supabase Auth vào màn hình `LoginScreen`.
-  - Quản lý persistent session qua Riverpod Provider.
-- **Cơ sở dữ liệu (Database)**:
-  - Định nghĩa database schema thực tế trên Supabase (Users, Photos, Comments, Likes, Portfolio).
-  - Viết các Repository class (`PhotoRepository`, `UserRepository`, `PortfolioRepository`) để gọi API từ Supabase.
-- **Lưu trữ (Storage)**:
-  - Cập nhật luồng `upload_screen.dart` để upload ảnh thật sự lên Supabase Storage bucket.
-  - Xử lý nén ảnh/thumb trước khi upload hoặc qua Supabase webhook.
-- **State Management**:
-  - Chuyển toàn bộ mock data hiện tại thành AsyncValue trên Riverpod để fetch data realtime.
-
-### 2. Hoàn thiện Logic Social Layer (Phase 3)
-> Xử lý tương tác giữa người dùng với người dùng.
-- **Following Feed Filter**:
-  - Thêm logic lọc Feed trên màn hình Home (chỉ fetch Post của những user đang Following).
-- **Cơ chế Follow/Unfollow**:
-  - Gắn logic gọi API follow/unfollow trên `ProfileScreen` và feed headers. Cập nhật state UI ngay lập tức (optimistic UI update).
-- **Comments Full Flow**:
-  - Thiết kế và gắn Data cho BottomSheet / Modal liệt kê danh sách comment ở `PhotoDetailScreen`.
-  - Logic post comment mới.
-- **Notifications Screen**:
-  - *Màn hình mới chưa có*: Chứa danh sách thông báo lịch sử (likes, new comments, follows).
-
-### 3. Hoàn thiện Portfolio Builder (Phase 4)
-- **Portfolio Public View**:
-  - *Màn hình mới chưa có*: Màn hình hiển thị Portfolio cho người mua/vãn cảnh khi họ có link sharing. Sẽ parse cấu trúc block JSON thành giao diện thực tế.
-- **Lưu trữ Data Portfolio Editor**:
-  - Kết nối trạng thái của drag-and-drop editor (`portfolio_editor_screen.dart`) để lưu thành cấu trúc JSON trên Supabase DB.
-
-### 4. Polish & Tối ưu (Phase 5)
-- Mobile responsiveness: Tinh chỉnh lại tỷ lệ font & spacing trên màn hình hẹp (Mobile browser / App).
-- PWA/SEO optimization (Dynamic meta tags cho flutter web nếu hỗ trợ qua template).
-
----
-
-## Open Questions
-
-> [!WARNING]
-> Cần xác nhận từ USER: Với Supabase, chúng ta sử dụng Backend-as-a-Service, bạn đã chuẩn bị sẵn Project URL & API Key của Supabase chưa, hay tôi sẽ giúp xây dựng những SQL Scripts (Migrations) trước để bạn tự apply?
+> Đối với màn hình **Public Portfolio**: Bạn muốn nó sẽ hiển thị dưới dạng Full-width (chiếm trọn mí trình duyệt, không có Bottom Navigation Bar của app) để giống hệt một Website cá nhân, hay vẫn phải nằm gọn trong khung navigation của App (như một màn hình con)?
+> 
+> *Gợi ý: Đặt nó dưới dạng Full-width Web Page riêng biệt sẽ chuyên nghiệp hơn.* Xin ý kiến để tôi bắt tay vào code!

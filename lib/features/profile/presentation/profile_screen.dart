@@ -5,20 +5,21 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:luxlog/features/profile/providers/follow_state_provider.dart';
 
 /// User Profile Screen — portfolio preview + photo grid + bio
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   final String username;
   const ProfileScreen({super.key, required this.username});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen>
+class _ProfileScreenState extends ConsumerState<ProfileScreen>
     with TickerProviderStateMixin {
   late TabController _tabCtrl;
-  bool _isFollowing = false;
   static const _tabs = ['Photos', 'Portfolio', 'Collections', 'Gear'];
 
   @override
@@ -35,6 +36,9 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Read from FollowState Provider
+    final isFollowing = ref.watch(followStateProvider).contains(widget.username);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: NestedScrollView(
@@ -58,8 +62,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               collapseMode: CollapseMode.parallax,
               background: _ProfileHeader(
                 username: widget.username,
-                isFollowing: _isFollowing,
-                onFollow: () => setState(() => _isFollowing = !_isFollowing),
+                isFollowing: isFollowing,
+                onFollow: () => ref.read(followStateProvider.notifier).toggleFollow(widget.username),
               ),
             ),
           ),
