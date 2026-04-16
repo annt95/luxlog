@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luxlog/features/auth/presentation/login_screen.dart';
+import 'package:luxlog/features/auth/presentation/signup_screen.dart';
 import 'package:luxlog/features/discover/presentation/discover_screen.dart';
 import 'package:luxlog/features/feed/presentation/feed_screen.dart';
 import 'package:luxlog/features/gallery/presentation/photo_detail_screen.dart';
@@ -13,15 +14,37 @@ import 'package:luxlog/features/explore/presentation/explore_screen.dart';
 import 'package:luxlog/features/notifications/presentation/notifications_screen.dart';
 import 'package:luxlog/shared/widgets/main_scaffold.dart';
 
+import 'package:luxlog/core/services/supabase_service.dart';
+
 final router = GoRouter(
   initialLocation: '/',
   debugLogDiagnostics: false,
+  redirect: (context, state) {
+    final authState = SupabaseService.client.auth.currentSession;
+    final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/signup';
+
+    // Uncomment this when fully wired:
+    /*
+    if (authState == null && !isLoggingIn) {
+      return '/login';
+    }
+    if (authState != null && isLoggingIn) {
+      return '/';
+    }
+    */
+    return null;
+  },
   routes: [
     // ── Auth ────────────────────────────────────────────────
     GoRoute(
       path: '/login',
       name: 'login',
       builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/signup',
+      name: 'signup',
+      builder: (context, state) => const SignupScreen(),
     ),
 
     // ── Main Shell (with bottom nav) ─────────────────────────

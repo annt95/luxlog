@@ -3,9 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/app/router.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/core/services/supabase_service.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  await SupabaseService.initialize();
 
   // Immersive dark UI — extend content behind status bar
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(

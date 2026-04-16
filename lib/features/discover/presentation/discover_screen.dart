@@ -50,9 +50,16 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        backgroundColor: AppColors.surfaceContainerHigh,
+        onRefresh: () async {
+          await Future.delayed(const Duration(seconds: 1));
+          setState(() {});
+        },
+        child: CustomScrollView(
+          controller: _scrollController,
+          slivers: [
           // ── Glassmorphism AppBar ─────────────────────────
           SliverPersistentHeader(
             pinned: true,
@@ -123,6 +130,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

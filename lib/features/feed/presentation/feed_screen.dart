@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/features/gallery/presentation/widgets/comment_bottom_sheet.dart';
+import 'package:luxlog/shared/widgets/skeleton_widgets.dart';
 
 /// Module 2: Social Feed — Instagram-like following feed
 class FeedScreen extends StatefulWidget {
@@ -55,9 +56,16 @@ class _FeedScreenState extends State<FeedScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        backgroundColor: AppColors.surfaceContainerHigh,
+        onRefresh: () async {
+          await Future.delayed(const Duration(seconds: 1));
+          setState(() {});
+        },
+        child: CustomScrollView(
+          controller: _scrollController,
+          slivers: [
           // AppBar
           SliverPersistentHeader(
             pinned: true,
@@ -82,7 +90,15 @@ class _FeedScreenState extends State<FeedScreen> {
                 if (displayPosts.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.all(40),
-                    child: Center(child: Text("No posts found. Start following someone!", style: TextStyle(color: Colors.grey))),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.feed_outlined, size: 60, color: AppColors.onSurfaceVariant),
+                          SizedBox(height: 16),
+                          Text("No posts found. Start following someone!", style: TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                    ),
                   );
                 }
                 if (i >= displayPosts.length) return _LoadingIndicator();
@@ -94,6 +110,7 @@ class _FeedScreenState extends State<FeedScreen> {
 
           const SliverToBoxAdapter(child: SizedBox(height: 96)),
         ],
+      ),
       ),
     );
   }
