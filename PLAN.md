@@ -245,4 +245,4 @@ class ValidationException extends AppException { ... }
 - [x] App Icon (AI-generated, saved to assets/)
 - [x] Unit Tests (FollowStateProvider — 4/4 pass)
 - [x] E2E Test scaffold (integration_test/)
-- [x] Đổi tên toàn bộ vibeshot → luxlog
+- [x] Đổi tên toàn bộ luxlog → luxlog
