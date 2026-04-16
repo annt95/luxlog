@@ -1,309 +1,65 @@
-# Luxlog — Photography Platform
-> Dựa trên thiết kế **"The Darkroom Editorial"** từ Stitch Project `6660914350535156406`
+# Luxlog — Photography Platform Implementation Plan
 
-Xây dựng một nền tảng nhiếp ảnh tích hợp 4 chức năng trong một sản phẩm duy nhất, lấy cảm hứng từ Flickr, Instagram và Behance, với design system tối giản cao cấp — dark mode, vintage gold accent, glassmorphism.
+Cập nhật tiến độ dự án Luxlog (trước đây là VibeShot). Dự án đang được xây dựng trên Flutter Web/Mobile với thiết kế **"The Darkroom Editorial"**.
 
----
+## Mục tiêu hiện tại
+Cập nhật kế hoạch để phản ánh những phần giao diện (UI) đã hoàn thành xuất sắc trong Phase 1 & Phase 2, và vạch ra lộ trình tích hợp hệ thống Backend (Supabase) cùng hoàn thiện luồng Logic cho Phase 3 & Phase 4.
 
-## Màn hình thiết kế gốc từ Stitch
-
-| Screen | Loại | Kích thước |
-|---|---|---|
-| Luxlog Feed - Desktop | 🖥️ Desktop | 2560×4648 |
-| Photo Detail - Desktop Web View | 🖥️ Desktop | 2560×2048 |
-| Luxlog Feed - Mobile | 📱 Mobile | 780×3538 |
-| Photo Detail - Mobile App View | 📱 Mobile | 780×2622 |
+> [!IMPORTANT]
+> **User Review Required**: Kế hoạch này chuyển trọng tâm từ việc thiết kế UI thuần sang việc tích hợp dữ liệu thật. Xin đánh giá mức độ ưu tiên: Bạn muốn làm Hệ thống Đăng nhập & Data trước hay làm nốt các Màn hình (Ví dụ: Public Portfolio & Notifications) trước?
 
 ---
 
-## 4 Modules chức năng
-
-### 📸 Module 1 — Gallery (Flickr-like)
-Nơi đăng ảnh đẹp chất lượng cao, hiển thị đầy đủ EXIF metadata.
-- Upload ảnh RAW/JPEG, tự động đọc EXIF (ISO, Aperture, Shutter Speed, Focal Length, Camera, Lens, GPS)
-- Hiển thị metadata dạng badge monospace (Space Grotesk font)
-- Masonry layout / Grid layout toggle
-- Collections & Albums
-- Download original / license
-
-### 🌀 Module 2 — Social Feed (Instagram-like)
-Mạng xã hội cho cộng đồng yêu nhiếp ảnh.
-- Feed ảnh cuộn vô tận (infinite scroll)
-- Like, comment, save, share
-- Follow / Unfollow photographers
-- Stories / Moments (short-lived content)
-- Explore / Discover tab
-- Notifications
-
-### 🎨 Module 3 — Portfolio Builder (Behance-like)
-Công cụ tạo portfolio chuyên nghiệp cho thợ ảnh.
-- Tạo project portfolio với cover image
-- Drag-and-drop layout editor
-- Sections: About, Works, Contact
-- Custom domain hỗ trợ
-- Analytics: views, likes, saves
-- PDF export
-- Client inquiry form
-
-### 🖼️ Module 4 — Discover Feed (Curated)
-Nơi xem ảnh được chọn lọc chất lượng cao.
-- Algorithmic feed + Editor's Pick
-- Filter by: Genre, Camera, Lens, Location
-- Sort: Trending, Latest, Most Viewed
-- Full-screen immersive view
-- Mood boards / Collections
+## 🟢 Những gì đã hoàn thành (Phase 1 & 2 UI/UX)
+- **Tech Stack**: Đã thiết lập Flutter 3.41, Riverpod 2, GoRouter. Triển khai CI/CD Web lên Vercel.
+- **Design System**: Thống nhất `theme.dart`, CSS variables, color (Vintage Gold/Charcoal), Typography, Glassmorphism.
+- **UI Module Gallery / Feed**: Màn hình Social Feed (Instagram-like con), Photo Detail, Upload màn (cùng parse EXIF thật).
+- **UI Module Explore / Discover**: Màn hình Discover Masonry, Explore Search.
+- **UI Module Portfolio / Profile**: Màn hình Dashboard, Portfolio Editor (drag&drop blocks), và Profile Cá nhân.
 
 ---
 
-## Tech Stack
+## 🟡 Những gì còn thiếu (Cần triển khai)
 
-### Frontend — Flutter 3.41+
-```
-Framework    : Flutter 3.41 (Dart 3.11)
-Platform     : Android, iOS, Web (responsive)
-State        : Riverpod 2 (code generation)
-Navigation   : Go Router 14
-Network      : Dio + Retrofit
-Image        : cached_network_image + image_picker
-Animations   : flutter_animate
-Icons        : Material Symbols / lucide_icons
-EXIF Parse   : native_exif (mobile) + exif (dart)
-Storage local: drift (SQLite)
-```
+### 1. Tích hợp Backend (Supabase)
+> Tầng tảng thiết yếu để ứng dụng có thể lưu trữ và hoạt động thực.
+- **Xác thực (Auth)**:
+  - Gắn Supabase Auth vào màn hình `LoginScreen`.
+  - Quản lý persistent session qua Riverpod Provider.
+- **Cơ sở dữ liệu (Database)**:
+  - Định nghĩa database schema thực tế trên Supabase (Users, Photos, Comments, Likes, Portfolio).
+  - Viết các Repository class (`PhotoRepository`, `UserRepository`, `PortfolioRepository`) để gọi API từ Supabase.
+- **Lưu trữ (Storage)**:
+  - Cập nhật luồng `upload_screen.dart` để upload ảnh thật sự lên Supabase Storage bucket.
+  - Xử lý nén ảnh/thumb trước khi upload hoặc qua Supabase webhook.
+- **State Management**:
+  - Chuyển toàn bộ mock data hiện tại thành AsyncValue trên Riverpod để fetch data realtime.
 
-### Backend
-```
-Runtime      : Node.js (Fastify) hoặc Supabase Edge Functions
-Database     : PostgreSQL (Supabase)
-Auth         : Supabase Auth (Google, Apple, Email)
-Storage      : Supabase Storage (ảnh + video)
-EXIF server  : sharp + exifr (Node.js)
-Search       : Supabase Full Text Search / Meilisearch
-Realtime     : Supabase Realtime (notifications, feed)
-```
+### 2. Hoàn thiện Logic Social Layer (Phase 3)
+> Xử lý tương tác giữa người dùng với người dùng.
+- **Following Feed Filter**:
+  - Thêm logic lọc Feed trên màn hình Home (chỉ fetch Post của những user đang Following).
+- **Cơ chế Follow/Unfollow**:
+  - Gắn logic gọi API follow/unfollow trên `ProfileScreen` và feed headers. Cập nhật state UI ngay lập tức (optimistic UI update).
+- **Comments Full Flow**:
+  - Thiết kế và gắn Data cho BottomSheet / Modal liệt kê danh sách comment ở `PhotoDetailScreen`.
+  - Logic post comment mới.
+- **Notifications Screen**:
+  - *Màn hình mới chưa có*: Chứa danh sách thông báo lịch sử (likes, new comments, follows).
 
-### Infrastructure
-```
-Hosting BFF  : Supabase (DB + Auth + Storage + Realtime)
-CDN          : Supabase CDN (built-in)
-Push Notif   : Firebase Cloud Messaging
-Monitoring   : Sentry Flutter SDK
-CI/CD        : GitHub Actions + Fastlane
-```
+### 3. Hoàn thiện Portfolio Builder (Phase 4)
+- **Portfolio Public View**:
+  - *Màn hình mới chưa có*: Màn hình hiển thị Portfolio cho người mua/vãn cảnh khi họ có link sharing. Sẽ parse cấu trúc block JSON thành giao diện thực tế.
+- **Lưu trữ Data Portfolio Editor**:
+  - Kết nối trạng thái của drag-and-drop editor (`portfolio_editor_screen.dart`) để lưu thành cấu trúc JSON trên Supabase DB.
 
----
-
-## Cấu trúc Project Flutter
-
-```
-lib/
-├── main.dart
-├── app/
-│   ├── router.dart              ← GoRouter config
-│   └── theme.dart               ← Darkroom design tokens
-│
-├── features/
-│   ├── auth/                    ← Login, Register
-│   │   ├── presentation/
-│   │   ├── data/
-│   │   └── domain/
-│   │
-│   ├── discover/                ← Module 4: Discover Feed
-│   │   ├── presentation/
-│   │   │   ├── discover_screen.dart
-│   │   │   └── widgets/
-│   │   ├── data/
-│   │   └── domain/
-│   │
-│   ├── feed/                    ← Module 2: Social Feed
-│   │   ├── presentation/
-│   │   │   ├── feed_screen.dart
-│   │   │   └── widgets/
-│   │   ├── data/
-│   │   └── domain/
-│   │
-│   ├── gallery/                 ← Module 1: Gallery + EXIF
-│   │   ├── presentation/
-│   │   │   ├── photo_detail_screen.dart
-│   │   │   ├── upload_screen.dart
-│   │   │   ├── gallery_grid_screen.dart
-│   │   │   └── widgets/
-│   │   │       ├── exif_badge.dart
-│   │   │       └── masonry_grid.dart
-│   │   ├── data/
-│   │   └── domain/
-│   │
-│   ├── portfolio/               ← Module 3: Portfolio Builder
-│   │   ├── presentation/
-│   │   │   ├── portfolio_screen.dart
-│   │   │   ├── portfolio_editor_screen.dart
-│   │   │   └── widgets/
-│   │   ├── data/
-│   │   └── domain/
-│   │
-│   ├── profile/                 ← User Profile
-│   ├── explore/                 ← Search + Explore
-│   └── notifications/           ← Notification center
-│
-├── shared/
-│   ├── widgets/
-│   │   ├── app_bar.dart         ← Glassmorphism AppBar
-│   │   ├── bottom_nav.dart      ← Bottom navigation
-│   │   ├── photo_card.dart      ← Shared photo card
-│   │   └── glass_container.dart ← Glassmorphism wrapper
-│   ├── providers/
-│   └── utils/
-│
-supabase/
-├── migrations/
-│   └── 001_initial.sql
-└── functions/
-    └── exif-process/            ← Edge function: EXIF + resize
-```
-
----
-
-## Database Schema (Drizzle ORM)
-
-```typescript
-// Users
-users { id, username, email, avatar, bio, website, createdAt }
-follows { followerId, followingId, createdAt }
-
-// Photos
-photos {
-  id, userId, title, description,
-  url, thumbnailUrl, width, height, fileSize,
-  // EXIF
-  camera, lens, iso, aperture, shutterSpeed,
-  focalLength, flashUsed, whiteBalance,
-  takenAt, latitude, longitude,
-  // Meta
-  views, likes, downloads,
-  license, tags, isPublic, createdAt
-}
-
-// Social
-likes { userId, photoId, createdAt }
-comments { id, userId, photoId, body, createdAt }
-saves { userId, photoId, collectionId }
-collections { id, userId, name, coverPhotoId, isPublic }
-
-// Portfolio
-portfolios { id, userId, title, slug, coverImage, bio, isPublic }
-portfolio_projects {
-  id, portfolioId, title, description,
-  coverImage, blocks (JSONB), order, publishedAt
-}
-
-// Feed
-notifications { id, userId, type, fromUserId, photoId, read, createdAt }
-```
-
----
-
-## Design System (từ Stitch Darkroom Editorial)
-
-```css
-:root {
-  /* Colors */
-  --background: #0e0e0e;
-  --surface: #0e0e0e;
-  --surface-container: #191919;
-  --surface-container-high: #1f1f1f;
-  --primary: #e2c19b;        /* Vintage Gold */
-  --on-primary: #523c1f;
-  --secondary: #9f9d9d;      /* Muted Silver */
-  --on-surface: #e5e5e5;
-  --outline: #757575;
-  --outline-variant: #484848;
-
-  /* Typography */
-  --font-display: 'Manrope', sans-serif;
-  --font-body: 'Inter', sans-serif;
-  --font-mono: 'Space Grotesk', monospace;  /* EXIF data */
-
-  /* Shape */
-  --radius: 4px;             /* Sharp, professional */
-
-  /* Glassmorphism */
-  --glass-bg: rgba(44, 44, 44, 0.6);
-  --glass-blur: blur(12px);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.05);
-}
-```
-
----
-
-## Phased Roadmap
-
-### Phase 1 — Foundation (2 tuần)
-- [ ] Project setup: Next.js 15 + TypeScript + Tailwind
-- [ ] Design system: CSS variables từ Stitch tokens
-- [ ] Auth: NextAuth với Google + Email
-- [ ] Database: Schema Drizzle + Neon setup
-- [ ] Layout: AppBar, Sidebar, Navigation
-- [ ] Stitch HTML → Components conversion
-
-### Phase 2 — Core Gallery + Feed (3 tuần)
-- [ ] Upload flow: EXIF parse + Cloudinary
-- [ ] Photo Detail page (desktop + mobile theo Stitch)
-- [ ] Masonry gallery grid
-- [ ] Discover Feed page (desktop theo Stitch)
-- [ ] Infinite scroll + skeleton loading
-- [ ] Like / Save actions
-
-### Phase 3 — Social Layer (2 tuần)
-- [ ] Social Feed (following-only)
-- [ ] User profile pages
-- [ ] Follow / Unfollow
-- [ ] Comments
-- [ ] Notifications
-- [ ] Explore / Search
-
-### Phase 4 — Portfolio Builder (3 tuần)
-- [ ] Portfolio dashboard
-- [ ] Project editor (drag & drop blocks)
-- [ ] Public portfolio view
-- [ ] Analytics dashboard
-- [ ] PDF export
-- [ ] Custom slug
-
-### Phase 5 — Polish & Launch (1 tuần)
-- [ ] Mobile responsive (theo Stitch mobile screens)
-- [ ] SEO + OG tags
-- [ ] Performance: Lighthouse 90+
-- [ ] Vercel deployment
-- [ ] Monitoring setup
-
----
-
-## Các màn hình cần tạo thêm trong Stitch
-
-> [!NOTE]
-> Stitch hiện có 4 screens. Cần tạo thêm:
-
-| Màn hình | Module |
-|---|---|
-| Upload Flow | Gallery |
-| User Profile Page | Social |
-| Explore / Search | Social |
-| Portfolio Editor | Portfolio |
-| Portfolio Public View | Portfolio |
-| Notifications | Social |
+### 4. Polish & Tối ưu (Phase 5)
+- Mobile responsiveness: Tinh chỉnh lại tỷ lệ font & spacing trên màn hình hẹp (Mobile browser / App).
+- PWA/SEO optimization (Dynamic meta tags cho flutter web nếu hỗ trợ qua template).
 
 ---
 
 ## Open Questions
 
-> [!IMPORTANT]
-> **Stack preference**: Dùng Next.js (full-stack) hay tách riêng Backend API (Express/Fastify)?
-
-> [!IMPORTANT]
-> **Mobile App**: Chỉ làm web responsive, hay có plan làm React Native / Flutter sau này?
-
-> [!IMPORTANT]
-> **Storage**: Dùng Cloudinary (có free tier) hay tự host với S3/R2?
-
 > [!WARNING]
-> **EXIF GPS**: Hiển thị vị trí GPS cần có opt-in privacy toggle — người dùng phải chọn có/không.
+> Cần xác nhận từ USER: Với Supabase, chúng ta sử dụng Backend-as-a-Service, bạn đã chuẩn bị sẵn Project URL & API Key của Supabase chưa, hay tôi sẽ giúp xây dựng những SQL Scripts (Migrations) trước để bạn tự apply?
