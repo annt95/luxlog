@@ -1,4 +1,4 @@
--- Luxlog / VibeShot Supabase Schema
+-- Luxlog Supabase Schema
 -- Run this script in the Supabase SQL Editor
 
 -- 1. Users Table (inherits from auth.users via a trigger or foreign key)
