@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:vibeshot/app/router.dart';
-import 'package:vibeshot/app/theme.dart';
+import 'package:luxlog/app/router.dart';
+import 'package:luxlog/app/theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,18 +17,18 @@ void main() async {
 
   runApp(
     const ProviderScope(
-      child: VibeShotApp(),
+      child: LuxlogApp(),
     ),
   );
 }
 
-class VibeShotApp extends StatelessWidget {
-  const VibeShotApp({super.key});
+class LuxlogApp extends StatelessWidget {
+  const LuxlogApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'VibeShot',
+      title: 'Luxlog',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
       routerConfig: router,

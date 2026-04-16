@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
-import 'package:vibeshot/app/theme.dart';
+import 'package:luxlog/app/theme.dart';
 
 /// Auth: Login Screen — Darkroom editorial style
 class LoginScreen extends StatefulWidget {
@@ -67,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      Text('VibeShot', style: AppTextStyles.heroTitle.copyWith(fontSize: 36))
+                      Text('Luxlog', style: AppTextStyles.heroTitle.copyWith(fontSize: 36))
                           .animate().fadeIn(delay: 100.ms),
                       const SizedBox(height: 6),
                       Text(
@@ -183,7 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     Text("Don't have an account? ", style: AppTextStyles.bodySmall),
                                     GestureDetector(
                                       onTap: () {},
-                                      child: Text('Join VibeShot', style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                                      child: Text('Join Luxlog', style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
                                     ),
                                   ],
                                 ),

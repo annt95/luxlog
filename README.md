@@ -1,10 +1,10 @@
-# VibeShot 📷
+# Luxlog 📷
 
 > A photography platform built with Flutter — inspired by Flickr, Instagram & Behance.
 
-## What is VibeShot?
+## What is Luxlog?
 
-VibeShot is a multi-feature photography platform with 4 core modules:
+Luxlog is a multi-feature photography platform with 4 core modules:
 
 | Module | Description |
 |--------|-------------|

@@ -2,10 +2,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:vibeshot/app/theme.dart';
-import 'package:vibeshot/shared/widgets/photo_card.dart';
+import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/shared/widgets/photo_card.dart';
 
-/// Module 4: Discover Feed — based on Stitch "VibeShot Feed - Desktop/Mobile"
+/// Module 4: Discover Feed — based on Stitch "Luxlog Feed - Desktop/Mobile"
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({super.key});
 
@@ -189,7 +189,7 @@ class _GlassAppBarDelegate extends SliverPersistentHeaderDelegate {
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        'VibeShot',
+                        'Luxlog',
                         style: AppTextStyles.titleLarge.copyWith(
                           letterSpacing: -0.5,
                         ),

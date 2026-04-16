@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vibeshot/main.dart';
+import 'package:luxlog/main.dart';
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
-    await tester.pumpWidget(const VibeShotApp());
+    await tester.pumpWidget(const LuxlogApp());
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

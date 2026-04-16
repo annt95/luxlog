@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:vibeshot/app/theme.dart';
+import 'package:luxlog/app/theme.dart';
 
 class MainScaffold extends StatelessWidget {
   final Widget child;

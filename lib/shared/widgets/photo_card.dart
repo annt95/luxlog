@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
-import 'package:vibeshot/app/theme.dart';
+import 'package:luxlog/app/theme.dart';
 
 class PhotoCard extends StatefulWidget {
   final String photoId;

@@ -2,8 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:vibeshot/app/theme.dart';
-import 'package:vibeshot/shared/widgets/exif_badge.dart';
+import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/shared/widgets/exif_badge.dart';
 
 /// Module 1: Photo Detail — based on Stitch "Photo Detail - Desktop/Mobile"
 /// Full EXIF display, photographer info, immersive dark background

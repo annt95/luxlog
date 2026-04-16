@@ -3,8 +3,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:exif/exif.dart';
 import 'dart:io';
-import 'package:vibeshot/app/theme.dart';
-import 'package:vibeshot/shared/widgets/exif_badge.dart';
+import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/shared/widgets/exif_badge.dart';
 
 /// Upload screen — image picker + EXIF parse + preview
 class UploadScreen extends StatefulWidget {

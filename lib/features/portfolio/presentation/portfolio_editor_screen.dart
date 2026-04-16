@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:vibeshot/app/theme.dart';
+import 'package:luxlog/app/theme.dart';
 
 /// Module 3: Portfolio Editor — drag-reorder project blocks
 class PortfolioEditorScreen extends StatefulWidget {

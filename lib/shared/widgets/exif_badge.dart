@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:vibeshot/app/theme.dart';
+import 'package:luxlog/app/theme.dart';
 
 /// EXIF metadata badge — Space Grotesk mono font
 /// Gold left-accent border, dark background per Stitch design system

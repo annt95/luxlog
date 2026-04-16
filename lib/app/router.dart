@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:vibeshot/features/auth/presentation/login_screen.dart';
-import 'package:vibeshot/features/discover/presentation/discover_screen.dart';
-import 'package:vibeshot/features/feed/presentation/feed_screen.dart';
-import 'package:vibeshot/features/gallery/presentation/photo_detail_screen.dart';
-import 'package:vibeshot/features/gallery/presentation/upload_screen.dart';
-import 'package:vibeshot/features/portfolio/presentation/portfolio_screen.dart';
-import 'package:vibeshot/features/portfolio/presentation/portfolio_editor_screen.dart';
-import 'package:vibeshot/features/profile/presentation/profile_screen.dart';
-import 'package:vibeshot/features/explore/presentation/explore_screen.dart';
-import 'package:vibeshot/shared/widgets/main_scaffold.dart';
+import 'package:luxlog/features/auth/presentation/login_screen.dart';
+import 'package:luxlog/features/discover/presentation/discover_screen.dart';
+import 'package:luxlog/features/feed/presentation/feed_screen.dart';
+import 'package:luxlog/features/gallery/presentation/photo_detail_screen.dart';
+import 'package:luxlog/features/gallery/presentation/upload_screen.dart';
+import 'package:luxlog/features/portfolio/presentation/portfolio_screen.dart';
+import 'package:luxlog/features/portfolio/presentation/portfolio_editor_screen.dart';
+import 'package:luxlog/features/profile/presentation/profile_screen.dart';
+import 'package:luxlog/features/explore/presentation/explore_screen.dart';
+import 'package:luxlog/shared/widgets/main_scaffold.dart';
 
 final router = GoRouter(
   initialLocation: '/',

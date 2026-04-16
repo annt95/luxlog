@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// VibeShot — "The Darkroom Editorial" Design System
+/// Luxlog — "The Darkroom Editorial" Design System
 /// Based on Stitch project 6660914350535156406
 class AppColors {
   // ── Surfaces ──────────────────────────────────────────────

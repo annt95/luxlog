@@ -1,6 +1,6 @@
 {
-    "name": "vibeshot",
-    "short_name": "vibeshot",
+    "name": "luxlog",
+    "short_name": "luxlog",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
