@@ -198,18 +198,18 @@ class _GlassAppBarDelegate extends SliverPersistentHeaderDelegate {
                     ],
                   ),
                   const Spacer(),
-                  // Search
-                  IconButton(
-                    icon: const Icon(Icons.search, size: 22),
-                    color: AppColors.onSurfaceVariant,
-                    onPressed: () {},
-                  ),
-                  // Notifications
-                  IconButton(
-                    icon: const Icon(Icons.notifications_outlined, size: 22),
-                    color: AppColors.onSurfaceVariant,
-                    onPressed: () => context.push('/notifications'),
-                  ),
+                  // Search — tạm ẩn theo yêu cầu
+                  // IconButton(
+                  //   icon: const Icon(Icons.search, size: 22),
+                  //   color: AppColors.onSurfaceVariant,
+                  //   onPressed: () {},
+                  // ),
+                  // Notifications — tạm ẩn theo yêu cầu
+                  // IconButton(
+                  //   icon: const Icon(Icons.notifications_outlined, size: 22),
+                  //   color: AppColors.onSurfaceVariant,
+                  //   onPressed: () => context.push('/notifications'),
+                  // ),
                   // Avatar
                   const SizedBox(width: 4),
                   CircleAvatar(

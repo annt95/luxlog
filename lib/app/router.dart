@@ -73,7 +73,16 @@ final router = GoRouter(
           ],
         ),
 
-        // User Profile
+        // User Profile (own profile from bottom nav)
+        GoRoute(
+          path: '/profile',
+          name: 'my-profile',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: ProfileScreen(username: 'me'),
+          ),
+        ),
+
+        // User Profile (other users)
         GoRoute(
           path: '/u/:username',
           name: 'profile',

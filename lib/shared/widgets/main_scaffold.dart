@@ -10,8 +10,8 @@ class MainScaffold extends StatelessWidget {
   int _currentIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/feed')) return 1;
-    if (location.startsWith('/explore')) return 2;
-    if (location.startsWith('/portfolio')) return 3;
+    if (location.startsWith('/portfolio')) return 2;
+    if (location.startsWith('/profile')) return 3;
     return 0;
   }
 
@@ -23,7 +23,7 @@ class MainScaffold extends StatelessWidget {
       body: Stack(
         children: [
           child,
-          // Glassmorphism bottom nav
+          // Glassmorphism bottom nav — Stitch "Obsidian Gold" redesign
           Positioned(
             bottom: 0,
             left: 0,
@@ -42,44 +42,79 @@ class _GlassBottomNav extends StatelessWidget {
   final int currentIndex;
   const _GlassBottomNav({required this.currentIndex});
 
+  /// 4 tabs: Discover, Feed, [FAB gap], Portfolio, Profile
+  /// Symmetrical: 2 left + gap + 2 right
   static const _tabs = [
     (icon: Icons.explore_outlined, activeIcon: Icons.explore, label: 'Discover', path: '/'),
     (icon: Icons.dynamic_feed_outlined, activeIcon: Icons.dynamic_feed, label: 'Feed', path: '/feed'),
-    (icon: Icons.search_outlined, activeIcon: Icons.search, label: 'Explore', path: '/explore'),
     (icon: Icons.collections_outlined, activeIcon: Icons.collections, label: 'Portfolio', path: '/portfolio'),
+    (icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profile', path: '/profile'),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          height: 72 + MediaQuery.of(context).padding.bottom,
-          decoration: const BoxDecoration(
-            color: AppColors.glassBackground,
-            border: Border(
-              top: BorderSide(color: AppColors.glassBorder, width: 1),
+          height: 72 + bottomPadding,
+          decoration: BoxDecoration(
+            color: const Color(0xD90E0E0E), // rgba(14,14,14,0.85)
+            border: const Border(
+              top: BorderSide(
+                color: Color(0x0DFFFFFF), // rgba(255,255,255,0.05)
+                width: 1,
+              ),
             ),
           ),
-          child: SafeArea(
-            top: false,
+          child: Padding(
+            padding: EdgeInsets.only(bottom: bottomPadding),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(_tabs.length, (i) {
-                // Gap for FAB in center
-                if (i == 2) {
-                  return const SizedBox(width: 56);
-                }
-                final tab = _tabs[i];
-                final isActive = currentIndex == i;
-                return _NavItem(
-                  icon: isActive ? tab.activeIcon : tab.icon,
-                  label: tab.label,
-                  isActive: isActive,
-                  onTap: () => context.go(tab.path),
-                );
-              }),
+              children: [
+                // ── Left 2 tabs ──
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _NavItem(
+                        icon: currentIndex == 0 ? _tabs[0].activeIcon : _tabs[0].icon,
+                        label: _tabs[0].label,
+                        isActive: currentIndex == 0,
+                        onTap: () => context.go(_tabs[0].path),
+                      ),
+                      _NavItem(
+                        icon: currentIndex == 1 ? _tabs[1].activeIcon : _tabs[1].icon,
+                        label: _tabs[1].label,
+                        isActive: currentIndex == 1,
+                        onTap: () => context.go(_tabs[1].path),
+                      ),
+                    ],
+                  ),
+                ),
+                // ── Center gap for FAB ──
+                const SizedBox(width: 64),
+                // ── Right 2 tabs ──
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _NavItem(
+                        icon: currentIndex == 2 ? _tabs[2].activeIcon : _tabs[2].icon,
+                        label: _tabs[2].label,
+                        isActive: currentIndex == 2,
+                        onTap: () => context.go(_tabs[2].path),
+                      ),
+                      _NavItem(
+                        icon: currentIndex == 3 ? _tabs[3].activeIcon : _tabs[3].icon,
+                        label: _tabs[3].label,
+                        isActive: currentIndex == 3,
+                        onTap: () => context.go(_tabs[3].path),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -111,18 +146,22 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Pill-shaped highlight behind icon (active state)
             AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOutCubic,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               decoration: BoxDecoration(
                 color: isActive
-                    ? AppColors.primary.withOpacity(0.15)
+                    ? const Color(0x26E2C19B) // primary at 15%
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(
                 icon,
-                color: isActive ? AppColors.primary : AppColors.onSurfaceVariant,
+                color: isActive
+                    ? AppColors.primary
+                    : const Color(0xFF757575), // muted gray
                 size: 22,
               ),
             ),
@@ -132,8 +171,11 @@ class _NavItem extends StatelessWidget {
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 10,
-                color: isActive ? AppColors.primary : AppColors.onSurfaceVariant,
+                color: isActive
+                    ? AppColors.primary
+                    : const Color(0xFF757575),
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                letterSpacing: 0.1,
               ),
             ),
           ],
@@ -155,22 +197,22 @@ class _UploadFab extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppColors.primary, AppColors.primaryDim],
+            colors: [Color(0xFFE2C19B), Color(0xFFD3B38E)],
           ),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(6),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
-              blurRadius: 16,
+              color: const Color(0xFFE2C19B).withValues(alpha: 0.3),
+              blurRadius: 20,
               spreadRadius: 0,
-              offset: const Offset(0, 4),
+              offset: const Offset(0, 6),
             ),
           ],
         ),
         child: const Icon(
           Icons.add,
-          color: AppColors.onPrimary,
-          size: 24,
+          color: Color(0xFF412C11), // onPrimary
+          size: 26,
         ),
       ),
     );
