@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/shared/widgets/photo_card.dart';
@@ -207,7 +208,7 @@ class _GlassAppBarDelegate extends SliverPersistentHeaderDelegate {
                   IconButton(
                     icon: const Icon(Icons.notifications_outlined, size: 22),
                     color: AppColors.onSurfaceVariant,
-                    onPressed: () {},
+                    onPressed: () => context.push('/notifications'),
                   ),
                   // Avatar
                   const SizedBox(width: 4),

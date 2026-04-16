@@ -9,6 +9,7 @@ import 'package:luxlog/features/portfolio/presentation/portfolio_screen.dart';
 import 'package:luxlog/features/portfolio/presentation/portfolio_editor_screen.dart';
 import 'package:luxlog/features/profile/presentation/profile_screen.dart';
 import 'package:luxlog/features/explore/presentation/explore_screen.dart';
+import 'package:luxlog/features/notifications/presentation/notifications_screen.dart';
 import 'package:luxlog/shared/widgets/main_scaffold.dart';
 
 final router = GoRouter(
@@ -96,6 +97,13 @@ final router = GoRouter(
       path: '/upload',
       name: 'upload',
       builder: (context, state) => const UploadScreen(),
+    ),
+
+    // ── Notifications ─────────────────────────────────────────
+    GoRoute(
+      path: '/notifications',
+      name: 'notifications',
+      builder: (context, state) => const NotificationsScreen(),
     ),
   ],
 
