@@ -21,12 +21,15 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   static const _filters = [
     'All',
     'Trending',
+    // Categories from DB (mock for now)
     'Portrait',
     'Landscape',
     'Street',
     'Architecture',
     'Film',
     'Wildlife',
+    'Macro',
+    'Night',
   ];
 
   // Mock data — replace with Supabase query

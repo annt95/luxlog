@@ -2,8 +2,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/shared/widgets/exif_badge.dart';
+import 'package:luxlog/shared/widgets/tag_chip.dart';
 
 /// Module 1: Photo Detail — based on Stitch "Photo Detail - Desktop/Mobile"
 /// Full EXIF display, photographer info, immersive dark background
@@ -102,6 +104,21 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
                         color: AppColors.onSurfaceVariant,
                         height: 1.6,
                       ),
+                    ),
+                  ),
+
+                  // Tags section
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: ['goldenhour', 'santorini', 'sony', 'bokeh', 'travel']
+                          .map((tag) => TagChip(
+                                tagName: tag,
+                                onTap: () => context.push('/tag/$tag'),
+                              ))
+                          .toList(),
                     ),
                   ),
 

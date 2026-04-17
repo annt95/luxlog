@@ -5,6 +5,8 @@ import 'package:exif/exif.dart';
 import 'dart:io';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/shared/widgets/exif_badge.dart';
+import 'package:luxlog/shared/widgets/tag_input_widget.dart';
+import 'package:luxlog/shared/widgets/tag_chip.dart';
 
 /// Upload screen — image picker + EXIF parse + preview
 class UploadScreen extends StatefulWidget {
@@ -23,10 +25,25 @@ class _UploadScreenState extends State<UploadScreen> {
 
   final _captionCtrl = TextEditingController();
   final _titleCtrl = TextEditingController();
-  final _tagsCtrl = TextEditingController();
+  List<String> _tags = [];
+  List<String> _selectedCategories = []; // category slugs
   bool _shareGps = false;
   bool _allowDownload = true;
   String _selectedLicense = 'CC BY 4.0';
+
+  // Mock categories (will be replaced with DB data)
+  static const _mockCategories = [
+    ('portrait', 'Portrait'),
+    ('landscape', 'Landscape'),
+    ('street', 'Street'),
+    ('wildlife', 'Wildlife'),
+    ('architecture', 'Architecture'),
+    ('black-and-white', 'Black & White'),
+    ('macro', 'Macro'),
+    ('film', 'Film'),
+    ('night', 'Night'),
+    ('aerial', 'Aerial'),
+  ];
 
   static const _licenses = ['CC BY 4.0', 'CC BY-SA 4.0', 'CC BY-NC 4.0', 'All Rights Reserved'];
 
@@ -34,7 +51,6 @@ class _UploadScreenState extends State<UploadScreen> {
   void dispose() {
     _captionCtrl.dispose();
     _titleCtrl.dispose();
-    _tagsCtrl.dispose();
     super.dispose();
   }
 
@@ -176,7 +192,17 @@ class _UploadScreenState extends State<UploadScreen> {
                     parsingExif: _parsingExif,
                     captionCtrl: _captionCtrl,
                     titleCtrl: _titleCtrl,
-                    tagsCtrl: _tagsCtrl,
+                    tags: _tags,
+                    selectedCategories: _selectedCategories,
+                    mockCategories: _mockCategories,
+                    onTagsChanged: (tags) => setState(() => _tags = tags),
+                    onCategoryToggled: (slug) => setState(() {
+                      if (_selectedCategories.contains(slug)) {
+                        _selectedCategories.remove(slug);
+                      } else {
+                        _selectedCategories.add(slug);
+                      }
+                    }),
                     shareGps: _shareGps,
                     allowDownload: _allowDownload,
                     license: _selectedLicense,
@@ -325,7 +351,11 @@ class _DetailsStep extends StatelessWidget {
   final bool parsingExif;
   final TextEditingController captionCtrl;
   final TextEditingController titleCtrl;
-  final TextEditingController tagsCtrl;
+  final List<String> tags;
+  final List<String> selectedCategories;
+  final List<(String, String)> mockCategories;
+  final ValueChanged<List<String>> onTagsChanged;
+  final ValueChanged<String> onCategoryToggled;
   final bool shareGps;
   final bool allowDownload;
   final String license;
@@ -342,7 +372,11 @@ class _DetailsStep extends StatelessWidget {
     required this.parsingExif,
     required this.captionCtrl,
     required this.titleCtrl,
-    required this.tagsCtrl,
+    required this.tags,
+    required this.selectedCategories,
+    required this.mockCategories,
+    required this.onTagsChanged,
+    required this.onCategoryToggled,
     required this.shareGps,
     required this.allowDownload,
     required this.license,
@@ -433,16 +467,40 @@ class _DetailsStep extends StatelessWidget {
 
                 const SizedBox(height: 16),
 
-                // Tags
+                // Tags — chip-based input
                 _SectionLabel('Tags'),
                 const SizedBox(height: 8),
-                TextField(
-                  controller: tagsCtrl,
-                  style: AppTextStyles.body,
-                  decoration: const InputDecoration(
-                    hintText: 'landscape, golden hour, sony...',
-                    prefixIcon: Icon(Icons.tag, size: 18, color: AppColors.onSurfaceVariant),
-                  ),
+                TagInputWidget(
+                  tags: tags,
+                  onTagsChanged: onTagsChanged,
+                  onSearch: (query) async {
+                    // TODO: Replace with TagRepository.searchTags(query)
+                    final mockTags = ['goldenhour', 'sunset', 'portrait', 'landscape',
+                      'streetphotography', 'film', 'blackandwhite', 'macro',
+                      'nightphotography', 'aerial', 'sony', 'fujifilm', 'leica'];
+                    return mockTags
+                        .where((t) => t.contains(query.toLowerCase()))
+                        .toList();
+                  },
+                ),
+
+                const SizedBox(height: 20),
+
+                // Category picker
+                _SectionLabel('Category'),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: mockCategories.map((cat) {
+                    final isSelected = selectedCategories.contains(cat.$1);
+                    return TagChip(
+                      tagName: cat.$2,
+                      showHash: false,
+                      isSelected: isSelected,
+                      onTap: () => onCategoryToggled(cat.$1),
+                    );
+                  }).toList(),
                 ),
 
                 const SizedBox(height: 20),

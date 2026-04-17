@@ -5,6 +5,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/shared/widgets/tag_chip.dart';
 
 /// Explore / Search screen
 class ExploreScreen extends StatefulWidget {
@@ -34,6 +35,13 @@ class _ExploreScreenState extends State<ExploreScreen>
     ('Film', Icons.camera_roll_outlined, 'https://picsum.photos/seed/g8/300/300'),
     ('Night', Icons.nights_stay_outlined, 'https://picsum.photos/seed/g9/300/300'),
     ('Aerial', Icons.flight_outlined, 'https://picsum.photos/seed/g10/300/300'),
+  ];
+
+  // Mock trending tags (will be replaced with TagRepository.getTrendingTags())
+  static const _trendingTags = [
+    'goldenhour', 'streetphotography', 'portrait', 'blackandwhite',
+    'filmphotography', 'fujifilm', 'sony', 'nightscape', 'macro',
+    'landscapephotography', 'bokeh', 'leica', 'cinematic',
   ];
 
   @override
@@ -97,6 +105,29 @@ class _ExploreScreenState extends State<ExploreScreen>
                     imageUrl: _genres[i].$3,
                   ),
                   childCount: _genres.length,
+                ),
+              ),
+            ),
+
+            // Trending tags
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text('Trending Tags', style: AppTextStyles.sectionHeader),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 36,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  itemCount: _trendingTags.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 6),
+                  itemBuilder: (context, i) => TagChip(
+                    tagName: _trendingTags[i],
+                    onTap: () => context.push('/tag/${_trendingTags[i]}'),
+                  ),
                 ),
               ),
             ),

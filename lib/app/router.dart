@@ -12,6 +12,7 @@ import 'package:luxlog/features/portfolio/presentation/public_portfolio_screen.d
 import 'package:luxlog/features/profile/presentation/profile_screen.dart';
 import 'package:luxlog/features/explore/presentation/explore_screen.dart';
 import 'package:luxlog/features/notifications/presentation/notifications_screen.dart';
+import 'package:luxlog/features/tags/presentation/tag_feed_screen.dart';
 import 'package:luxlog/shared/widgets/main_scaffold.dart';
 
 import 'package:luxlog/core/services/supabase_service.dart';
@@ -145,6 +146,15 @@ final router = GoRouter(
       name: 'public-portfolio',
       builder: (context, state) => PublicPortfolioScreen(
         slug: state.pathParameters['slug']!,
+      ),
+    ),
+
+    // ── Tag Feed ──────────────────────────────────────────────
+    GoRoute(
+      path: '/tag/:tagName',
+      name: 'tag-feed',
+      builder: (context, state) => TagFeedScreen(
+        tagName: state.pathParameters['tagName']!,
       ),
     ),
   ],
