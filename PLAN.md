@@ -10,12 +10,13 @@
 |:---|:---:|:---|
 | **Discover Feed** | ✅ UI Done | Đã ẩn Search/Noti icon. Cần kết nối API |
 | **Social Feed** | ✅ UI Done | Tabs For You / Following hoạt động. Mock data |
-| **Photo Detail** | ✅ UI Done | EXIF, zoom, share. Mock data |
-| **Upload** | ✅ UI Done | Form có sẵn. Chưa kết nối storage |
+| **Photo Detail** | ✅ UI Done | EXIF, tag chips, zoom, share. Mock data |
+| **Upload** | ✅ UI Done | Chip-based tag input & category picker |
 | **Portfolio Editor** | ✅ UI Done | JSON block builder. Chưa lưu DB |
 | **Public Portfolio** | ✅ UI Done | Read-only renderer |
 | **Profile** | ✅ UI Done | Follow/Unfollow optimistic. Mock data |
-| **Explore/Search** | ✅ UI Done | Tạm rời khỏi bottom nav |
+| **Explore/Search** | ✅ UI Done | Trending tags + categories section |
+| **Tags & Categories**| ✅ UI + Data | DB Schema, Riverpod Repo, User suggestions |
 | **Notifications** | ✅ UI Done | Tạm ẩn icon. Skeleton UI |
 | **Bottom Nav** | ✅ Fixed | Redesigned: 4 tabs đối xứng + FAB trung tâm |
 | **Auth (Login)** | 🟡 UI Only | Có màn hình login. Chưa kết nối backend |
@@ -246,3 +247,7 @@ class ValidationException extends AppException { ... }
 - [x] Unit Tests (FollowStateProvider — 4/4 pass)
 - [x] E2E Test scaffold (integration_test/)
 - [x] Đổi tên toàn bộ luxlog → luxlog
+- [x] Hoàn thiện Phase D UI Polish (Pull-to-refresh, Skeleton loading)
+- [x] Xây dựng hệ thống Tags, Hashtags và Categories (Sql, Models, Repositories)
+- [x] Thêm UI TagChip, TagInputWidget, Upload / Explore / Discover screens integration
+- [x] Tính năng User đề xuất Category (Pending status / Approved status)
