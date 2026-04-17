@@ -10,6 +10,9 @@ flutter --version
 echo "Getting dependencies..."
 flutter pub get
 
+echo "Running code generation (Riverpod, Freezed, JSON)..."
+dart run build_runner build --delete-conflicting-outputs
+
 echo "Building web..."
 flutter build web --release --base-href / \
   --dart-define=SUPABASE_URL=${SUPABASE_URL:-""} \
