@@ -1,7 +1,9 @@
 -- Luxlog: Tags, Hashtags & Categories
 -- Migration 002
 
--- 1. Categories (curated, admin-managed)
+-- 1. Categories (admin-seeded + user-suggested)
+CREATE TYPE category_status AS ENUM ('approved', 'pending', 'rejected');
+
 CREATE TABLE public.categories (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT UNIQUE NOT NULL,
@@ -9,6 +11,8 @@ CREATE TABLE public.categories (
   icon TEXT,
   cover_image TEXT,
   display_order INT DEFAULT 0,
+  status category_status DEFAULT 'pending',
+  suggested_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -40,7 +44,10 @@ ALTER TABLE public.tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.photo_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.photo_categories ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Categories viewable by all" ON public.categories FOR SELECT USING (true);
+CREATE POLICY "Approved categories viewable by all" ON public.categories FOR SELECT
+  USING (status = 'approved' OR suggested_by = auth.uid());
+CREATE POLICY "Users can suggest categories" ON public.categories FOR INSERT
+  WITH CHECK (auth.uid() = suggested_by AND status = 'pending');
 CREATE POLICY "Tags viewable by all" ON public.tags FOR SELECT USING (true);
 CREATE POLICY "Photo tags viewable by all" ON public.photo_tags FOR SELECT USING (true);
 CREATE POLICY "Photo categories viewable by all" ON public.photo_categories FOR SELECT USING (true);
@@ -63,19 +70,20 @@ CREATE INDEX idx_photo_tags_photo ON public.photo_tags(photo_id);
 CREATE INDEX idx_photo_categories_cat ON public.photo_categories(category_id);
 CREATE INDEX idx_photo_categories_photo ON public.photo_categories(photo_id);
 CREATE INDEX idx_categories_slug ON public.categories(slug);
+CREATE INDEX idx_categories_status ON public.categories(status);
 
--- 7. Seed categories
-INSERT INTO public.categories (name, slug, icon, display_order) VALUES
-  ('Portrait', 'portrait', 'person_outline', 1),
-  ('Landscape', 'landscape', 'landscape', 2),
-  ('Street', 'street', 'location_city', 3),
-  ('Wildlife', 'wildlife', 'pets', 4),
-  ('Architecture', 'architecture', 'apartment', 5),
-  ('Black & White', 'black-and-white', 'contrast', 6),
-  ('Macro', 'macro', 'zoom_in', 7),
-  ('Film', 'film', 'camera_roll', 8),
-  ('Night', 'night', 'nights_stay', 9),
-  ('Aerial', 'aerial', 'flight', 10);
+-- 7. Seed categories (all pre-approved)
+INSERT INTO public.categories (name, slug, icon, display_order, status) VALUES
+  ('Portrait', 'portrait', 'person_outline', 1, 'approved'),
+  ('Landscape', 'landscape', 'landscape', 2, 'approved'),
+  ('Street', 'street', 'location_city', 3, 'approved'),
+  ('Wildlife', 'wildlife', 'pets', 4, 'approved'),
+  ('Architecture', 'architecture', 'apartment', 5, 'approved'),
+  ('Black & White', 'black-and-white', 'contrast', 6, 'approved'),
+  ('Macro', 'macro', 'zoom_in', 7, 'approved'),
+  ('Film', 'film', 'camera_roll', 8, 'approved'),
+  ('Night', 'night', 'nights_stay', 9, 'approved'),
+  ('Aerial', 'aerial', 'flight', 10, 'approved');
 
 -- 8. RPC: Upsert tag and increment usage count
 CREATE OR REPLACE FUNCTION public.increment_tag_usage(tag_name TEXT)

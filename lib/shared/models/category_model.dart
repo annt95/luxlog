@@ -12,6 +12,8 @@ class CategoryModel with _$CategoryModel {
     String? icon,
     @JsonKey(name: 'cover_image') String? coverImage,
     @JsonKey(name: 'display_order') @Default(0) int displayOrder,
+    @Default('approved') String status, // 'approved', 'pending', 'rejected'
+    @JsonKey(name: 'suggested_by') String? suggestedBy,
     @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _CategoryModel;
 

@@ -6,16 +6,63 @@ class CategoryRepository {
 
   CategoryRepository(this._client);
 
-  /// Get all categories ordered by display_order
+  /// Get all approved categories ordered by display_order
   Future<List<Map<String, dynamic>>> getCategories() async {
     try {
       final response = await _client
           .from('categories')
           .select()
+          .eq('status', 'approved')
           .order('display_order', ascending: true);
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       throw const NetworkException('Lỗi tải danh mục');
+    }
+  }
+
+  /// Get user's own suggested categories (including pending ones)
+  Future<List<Map<String, dynamic>>> getMySuggestions(String userId) async {
+    try {
+      final response = await _client
+          .from('categories')
+          .select()
+          .eq('suggested_by', userId)
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      throw const NetworkException('Lỗi tải đề xuất danh mục');
+    }
+  }
+
+  /// User suggests a new category
+  Future<Map<String, dynamic>> suggestCategory({
+    required String name,
+    required String userId,
+    String? icon,
+  }) async {
+    try {
+      // Generate slug from name
+      final slug = name
+          .toLowerCase()
+          .trim()
+          .replaceAll(RegExp(r'[^a-z0-9\s-]'), '')
+          .replaceAll(RegExp(r'\s+'), '-');
+
+      final response = await _client.from('categories').insert({
+        'name': name.trim(),
+        'slug': slug,
+        'icon': icon,
+        'status': 'pending',
+        'suggested_by': userId,
+        'display_order': 999, // will be reordered by admin on approval
+      }).select().single();
+
+      return response;
+    } catch (e) {
+      if (e.toString().contains('duplicate')) {
+        throw const StorageException('Danh mục này đã tồn tại');
+      }
+      throw const NetworkException('Lỗi đề xuất danh mục');
     }
   }
 
@@ -26,11 +73,11 @@ class CategoryRepository {
     int limit = 20,
   }) async {
     try {
-      // Find category
       final catResponse = await _client
           .from('categories')
           .select('id')
           .eq('slug', slug)
+          .eq('status', 'approved')
           .maybeSingle();
 
       if (catResponse == null) return [];

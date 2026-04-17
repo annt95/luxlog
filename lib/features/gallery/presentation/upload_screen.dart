@@ -388,6 +388,60 @@ class _DetailsStep extends StatelessWidget {
     required this.onUpload,
   });
 
+  void _showSuggestDialog(BuildContext context) {
+    final nameCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceContainerHigh,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        title: Text('Suggest a Category', style: AppTextStyles.titleMedium),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Suggest a new category for the community. It will be reviewed before appearing publicly.',
+              style: AppTextStyles.bodySmall,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameCtrl,
+              autofocus: true,
+              style: AppTextStyles.body,
+              decoration: const InputDecoration(
+                hintText: 'e.g. Astrophotography',
+                prefixIcon: Icon(Icons.category_outlined, size: 18, color: AppColors.onSurfaceVariant),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel', style: AppTextStyles.label.copyWith(color: AppColors.onSurfaceVariant)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (nameCtrl.text.trim().isNotEmpty) {
+                // TODO: Call CategoryRepository.suggestCategory() when Supabase is connected
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Category "${nameCtrl.text.trim()}" suggested! It will be reviewed.'),
+                    backgroundColor: AppColors.primaryContainer,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -492,15 +546,45 @@ class _DetailsStep extends StatelessWidget {
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: mockCategories.map((cat) {
-                    final isSelected = selectedCategories.contains(cat.$1);
-                    return TagChip(
-                      tagName: cat.$2,
-                      showHash: false,
-                      isSelected: isSelected,
-                      onTap: () => onCategoryToggled(cat.$1),
-                    );
-                  }).toList(),
+                  children: [
+                    ...mockCategories.map((cat) {
+                      final isSelected = selectedCategories.contains(cat.$1);
+                      return TagChip(
+                        tagName: cat.$2,
+                        showHash: false,
+                        isSelected: isSelected,
+                        onTap: () => onCategoryToggled(cat.$1),
+                      );
+                    }),
+                    // Suggest new category button
+                    GestureDetector(
+                      onTap: () => _showSuggestDialog(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: AppColors.primary.withOpacity(0.5),
+                            style: BorderStyle.solid,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.add, size: 14, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Suggest new...',
+                              style: AppTextStyles.exifData.copyWith(
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 20),
