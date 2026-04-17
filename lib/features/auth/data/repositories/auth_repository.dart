@@ -32,7 +32,7 @@ class AuthRepository {
     } on supa.AuthException catch (e, stackTrace) {
       throw AuthException(e.message, cause: e, stackTrace: stackTrace);
     } catch (e, stackTrace) {
-      throw UnknownException(cause: e, stackTrace: stackTrace);
+      throw UnknownException('Đã xảy ra lỗi không xác định', cause: e, stackTrace: stackTrace);
     }
   }
 
@@ -48,7 +48,7 @@ class AuthRepository {
     } on supa.AuthException catch (e, stackTrace) {
       throw AuthException(e.message, cause: e, stackTrace: stackTrace);
     } catch (e, stackTrace) {
-      throw UnknownException(cause: e, stackTrace: stackTrace);
+      throw UnknownException('Đã xảy ra lỗi không xác định', cause: e, stackTrace: stackTrace);
     }
   }
 
@@ -111,7 +111,7 @@ class AuthRepository {
     } on supa.AuthException catch (e, stackTrace) {
       throw AuthException(e.message, cause: e, stackTrace: stackTrace);
     } catch (e, stackTrace) {
-      throw UnknownException(cause: e, stackTrace: stackTrace);
+      throw UnknownException('Đã xảy ra lỗi không xác định', cause: e, stackTrace: stackTrace);
     }
   }
 }

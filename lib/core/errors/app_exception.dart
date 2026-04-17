@@ -9,45 +9,40 @@ sealed class AppException implements Exception {
 }
 
 class NetworkException extends AppException {
-  const NetworkException([
-    String message = 'Lỗi kết nối mạng',
-  ], {
+  const NetworkException(
+    String message, {
     Object? cause,
     StackTrace? stackTrace,
   }) : super(message, cause: cause, stackTrace: stackTrace);
 }
 
 class AuthException extends AppException {
-  const AuthException([
-    String message = 'Lỗi xác thực',
-  ], {
+  const AuthException(
+    String message, {
     Object? cause,
     StackTrace? stackTrace,
   }) : super(message, cause: cause, stackTrace: stackTrace);
 }
 
 class StorageException extends AppException {
-  const StorageException([
-    String message = 'Lỗi tải lên/tải xuống dữ liệu',
-  ], {
+  const StorageException(
+    String message, {
     Object? cause,
     StackTrace? stackTrace,
   }) : super(message, cause: cause, stackTrace: stackTrace);
 }
 
 class ValidationException extends AppException {
-  const ValidationException([
-    String message = 'Lỗi xác thực dữ liệu đầu vào',
-  ], {
+  const ValidationException(
+    String message, {
     Object? cause,
     StackTrace? stackTrace,
   }) : super(message, cause: cause, stackTrace: stackTrace);
 }
 
 class UnknownException extends AppException {
-  const UnknownException([
-    String message = 'Đã xảy ra lỗi không xác định',
-  ], {
+  const UnknownException(
+    String message, {
     Object? cause,
     StackTrace? stackTrace,
   }) : super(message, cause: cause, stackTrace: stackTrace);
