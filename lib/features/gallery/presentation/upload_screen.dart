@@ -1,8 +1,8 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:exif/exif.dart';
-import 'dart:io';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/shared/widgets/exif_badge.dart';
 import 'package:luxlog/shared/widgets/tag_input_widget.dart';
@@ -17,7 +17,8 @@ class UploadScreen extends StatefulWidget {
 }
 
 class _UploadScreenState extends State<UploadScreen> {
-  File? _selectedImage;
+  XFile? _selectedImage;
+  Uint8List? _selectedImageBytes;
   ExifInfo? _parsedExif;
   bool _parsingExif = false;
   bool _uploading = false;
@@ -59,16 +60,16 @@ class _UploadScreenState extends State<UploadScreen> {
     final picked = await picker.pickImage(source: source, imageQuality: 100);
     if (picked == null) return;
 
-    final file = File(picked.path);
+    final bytes = await picked.readAsBytes();
     setState(() {
-      _selectedImage = file;
+      _selectedImage = picked;
+      _selectedImageBytes = bytes;
       _parsedExif = null;
       _parsingExif = true;
     });
 
     // Parse EXIF
     try {
-      final bytes = await file.readAsBytes();
       final tags = await readExifFromBytes(bytes);
 
       ExifInfo? info;
@@ -187,7 +188,7 @@ class _UploadScreenState extends State<UploadScreen> {
             ? _PickStep(onPick: _pickImage)
             : _currentStep == 1
                 ? _DetailsStep(
-                    image: _selectedImage!,
+                    imageBytes: _selectedImageBytes!,
                     exif: _parsedExif,
                     parsingExif: _parsingExif,
                     captionCtrl: _captionCtrl,
@@ -346,7 +347,7 @@ class _PickButton extends StatelessWidget {
 // ── Step 1: Details + EXIF ───────────────────────────────────────────────────
 
 class _DetailsStep extends StatelessWidget {
-  final File image;
+  final Uint8List imageBytes;
   final ExifInfo? exif;
   final bool parsingExif;
   final TextEditingController captionCtrl;
@@ -367,7 +368,7 @@ class _DetailsStep extends StatelessWidget {
   final VoidCallback onUpload;
 
   const _DetailsStep({
-    required this.image,
+    required this.imageBytes,
     required this.exif,
     required this.parsingExif,
     required this.captionCtrl,
@@ -482,8 +483,8 @@ class _DetailsStep extends StatelessWidget {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
-                      child: Image.file(
-                        image,
+                      child: Image.memory(
+                        imageBytes,
                         width: 100,
                         height: 100,
                         fit: BoxFit.cover,

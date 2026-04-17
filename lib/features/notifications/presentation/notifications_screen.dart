@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:luxlog/app/theme.dart';
-import 'package:luxlog/app/theme.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});

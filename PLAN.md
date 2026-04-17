@@ -2,7 +2,7 @@
 
 > Bản kế hoạch toàn diện nhằm nâng cấp Luxlog từ giai đoạn MVP Frontend lên chuẩn **Enterprise-Ready**, bao gồm hệ thống xác thực người dùng đầy đủ, kiến trúc Clean Architecture, và bộ kiểm thử chuyên nghiệp.
 >
-> **Cập nhật lần cuối:** 2026-04-17 — Rà soát lại toàn bộ hiện trạng từ source code thật.
+> **Cập nhật lần cuối:** 2026-04-17 — E1+E2 done, fixing Vercel build errors.
 
 ---
 
@@ -13,7 +13,7 @@
 | **Discover Feed** | 🟡 UI + Mock | UI hoàn thiện. Dùng `_mockPhotos`. Cần wire `ref.watch(photoFeedProvider)` |
 | **Social Feed** | 🟡 UI + Mock | Tabs For You / Following hoạt động. `_MockPost` hardcoded |
 | **Photo Detail** | 🟡 UI + Mock | EXIF, tag chips, zoom, share. Mock EXIF data |
-| **Upload** | 🟡 UI + Stub | UI form hoàn thiện. `uploadPhoto()` trong repo là placeholder |
+| **Upload** | 🟡 UI + Stub | UI form hoàn thiện. Web-compatible (XFile/Uint8List). `uploadPhoto()` repo placeholder |
 | **Portfolio Editor** | 🟡 UI Only | JSON block builder. Repo `savePortfolio()` sẵn sàng nhưng chưa kết nối |
 | **Public Portfolio** | 🟡 UI Only | Read-only renderer. Repo `fetchPublicPortfolio()` sẵn sàng |
 | **Profile** | 🟡 UI + Mock | Follow/Unfollow optimistic. Repo sẵn sàng, chưa wire |
@@ -21,21 +21,23 @@
 | **Tags & Categories** | ✅ Done | DB Schema + Real Repos + Riverpod Providers + UI. Fully operational |
 | **Notifications** | 🟡 Skeleton | UI skeleton. Không có backend logic |
 | **Bottom Nav** | ✅ Done | Redesigned: 4 tabs đối xứng + FAB trung tâm |
-| **Auth (Login)** | 🟡 UI + TODO | UI glassmorphism hoàn thiện. Social buttons có `onTap: () {}` chưa wire |
-| **Auth (Register)** | 🟡 UI + TODO | UI form hoàn thiện. `// TODO: Call auth repository` (line 42) |
-| **Auth (Social Login)** | 🟡 Repo Done | `signInWithGoogle()` / `signInWithFacebook()` trong repo. Chưa wire vào UI |
+| **Auth (Login)** | ✅ Wired | UI glassmorphism + `authRepositoryProvider.signIn()` + Google/Facebook OAuth |
+| **Auth (Register)** | ✅ Wired | UI form wired to `authRepositoryProvider.signUp()` với error handling |
+| **Auth (Social Login)** | ✅ Wired | `signInWithGoogle()` / `signInWithFacebook()` connected in login_screen |
 | **Auth State Management** | ✅ Done | `authStateProvider` (Stream) + `currentUserProvider` trong Riverpod |
 | **Auth Repository** | ✅ Done | signUp, signIn, OAuth, signOut, resetPassword — real Supabase |
 | **Auth Remote Datasource** | ✅ Done | Auto-sync user profile sau đăng ký / OAuth |
+| **Router Guards** | ✅ Done | Anonymous browsing allowed; only `/upload`, `/notifications` require login |
 | **Database Layer** | ✅ Done | SQL migrations + 7 repositories kết nối Supabase |
 | **Repository Layer** | ✅ Done | Photo, Portfolio, User, Tag, Category, Auth, AuthRemote |
 | **Error Handling** | ✅ Done | Sealed `AppException` hierarchy + `ErrorBoundary` widget |
 | **Environment Config** | ✅ Done | `Env` class đọc `--dart-define`, không hardcode |
 | **Supabase Service** | ✅ Done | `SupabaseService.initialize()` + config check |
 | **Shared Models** | ✅ Done | Freezed: UserModel, PhotoModel, PortfolioModel, TagModel, CategoryModel |
+| **Vercel Build** | 🟡 Fixing | build_runner codegen added; fixing dart:io web compat |
 | **Unit Tests** | 🟡 Partial | ~14 tests: auth repo, exceptions, follow state, login, scaffold, smoke |
 | **E2E Tests** | 🟡 Partial | 1 integration test: Feed → Follow → Comment → Profile |
-| **CI/CD** | ✅ Done | Vercel auto-deploy on push |
+| **CI/CD** | ✅ Done | Vercel auto-deploy on push + Vercel Analytics/Speed Insights |
 
 ---
 
@@ -45,10 +47,11 @@
 |:---|:---:|:---|
 | Core Infrastructure | **100%** | Env, Supabase, Errors, Models |
 | Data Layer (Repositories) | **90%** | Chỉ thiếu `uploadPhoto()` file upload |
-| Auth System | **80%** | Backend xong. Cần wire 3–4 dòng code trong UI |
+| Auth System | **95%** | ✅ UI wired, guards active, social OAuth connected |
 | Frontend UI | **95%** | Tất cả màn hình polished với animations |
-| UI ↔ Data Wiring | **30%** | Hầu hết screens vẫn dùng mock data |
-| Router Guards | **60%** | Auth redirect logic đã viết nhưng commented out |
+| UI ↔ Data Wiring | **35%** | Auth done; feature screens vẫn dùng mock data |
+| Router Guards | **100%** | ✅ Anonymous browsing; /upload + /notifications protected |
+| Vercel Build | **80%** | build_runner added; fixing web compat issues |
 | Testing | **35%** | ~14 tests. Cần mở rộng cho repos + features |
 
 ---
@@ -57,19 +60,13 @@
 
 > Các Phase A–D đã hoàn thành phần lớn. Phase E tập trung **kết nối UI với Data Layer** đã có sẵn.
 
-### E1. Wire Auth UI → Repository ⚡ (Quan trọng nhất)
-#### [MODIFY] `lib/features/auth/presentation/signup_screen.dart`
-- Thay `// TODO: Call auth repository` bằng `ref.read(authRepositoryProvider).signUp(...)`
-- Xử lý loading state + error state
+### E1. Wire Auth UI → Repository ✅ DONE
+- `signup_screen.dart` → ConsumerStatefulWidget, wired to `authRepositoryProvider.signUp()`
+- `login_screen.dart` → ConsumerStatefulWidget, wired signIn + Google + Facebook + forgotPassword
 
-#### [MODIFY] `lib/features/auth/presentation/login_screen.dart`
-- Wire social buttons `onTap` → `authRepositoryProvider.signInWithGoogle()` / `signInWithFacebook()`
-- Wire email login → `authRepositoryProvider.signIn()`
-
-### E2. Activate Auth Guards
-#### [MODIFY] `lib/app/router.dart`
-- Uncomment `redirect` logic (đã viết sẵn, chỉ cần bỏ comment)
-- Test: chưa login → redirect `/login`; đã login ở `/login` → redirect `/`
+### E2. Activate Auth Guards ✅ DONE
+- `router.dart` → Anonymous browsing allowed; only `/upload` and `/notifications` require login
+- Logged-in users at `/login` redirect to `/`
 
 ### E3. Wire Feature Screens → Repositories
 #### [MODIFY] Discover, Feed, Explore, Photo Detail, Profile, Portfolio
