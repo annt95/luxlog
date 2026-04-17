@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
+import 'package:supabase_flutter/supabase_flutter.dart' as supa show AuthException;
 import 'package:luxlog/features/auth/data/repositories/auth_repository.dart';
 import 'package:luxlog/core/errors/app_exception.dart';
 
@@ -49,7 +50,7 @@ void main() {
             email: 'test@example.com',
             password: 'password123',
             data: {'display_name': 'Test User'},
-          )).thenThrow(const AuthException('Sign up failed'));
+          )).thenThrow(const supa.AuthException('Sign up failed'));
 
       expect(
         () => authRepository.signUp(

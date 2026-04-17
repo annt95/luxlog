@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException, StorageException;
 import '../../../../core/errors/app_exception.dart';
 
 class PhotoRepository {

@@ -1,4 +1,5 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
+import 'package:supabase_flutter/supabase_flutter.dart' as supa show AuthException;
 import '../../../../core/errors/app_exception.dart';
 
 class AuthRepository {
@@ -19,8 +20,8 @@ class AuthRepository {
         data: {'display_name': displayName},
       );
       return response;
-    } on AuthException catch (e) {
-      throw AppException(e.message);
+    } on supa.AuthException catch (e) {
+      throw AuthException(e.message);
     } catch (e) {
       throw UnknownException();
     }
@@ -35,8 +36,8 @@ class AuthRepository {
         email: email,
         password: password,
       );
-    } on AuthException catch (e) {
-      throw AppException(e.message);
+    } on supa.AuthException catch (e) {
+      throw AuthException(e.message);
     } catch (e) {
       throw UnknownException();
     }
@@ -76,8 +77,8 @@ class AuthRepository {
   Future<void> resetPassword(String email) async {
     try {
       await _client.auth.resetPasswordForEmail(email);
-    } on AuthException catch (e) {
-      throw AppException(e.message);
+    } on supa.AuthException catch (e) {
+      throw AuthException(e.message);
     } catch (e) {
       throw UnknownException();
     }

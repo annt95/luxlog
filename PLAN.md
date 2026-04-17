@@ -153,12 +153,13 @@
 | ~~3~~ | ~~Repositories (B2)~~ — Photo, Portfolio, User, Tag, Category | ✅ Done |
 | ~~4~~ | ~~Error Handling (B3)~~ — Global exceptions + boundary | ✅ Done |
 | ~~5~~ | ~~Auth UI (A1, A2)~~ — Signup & Login screens | ✅ Done (UI) |
-| **6** | **Wire Auth UI (E1, E2)** — Kết nối button → repo + activate guards | 🔴 Next |
-| **7** | **Wire Feature Screens (E3)** — Thay mock data → real providers | 🔴 Next |
-| **8** | **Photo Upload (E4)** — File → Storage → DB | 🔴 Next |
-| **9** | **Tests Mở rộng (C)** — Repo tests + widget tests | 🟡 In Progress |
-| **10** | **UI Polish (D)** — Empty states, Infinite scroll, A11y | 🟡 Partial |
-| **11** | **Notifications (E5)** — Backend + real-time | ❌ Not Started |
+| ~~6~~ | ~~Wire Auth UI (E1, E2)~~ | ✅ Done |
+| ~~7~~ | ~~Wire Feature Screens (E3)~~ | ✅ Done |
+| **8** | **Fix Analysis Errors** — Resolving errors in Feed & Notifications | 🔴 Next |
+| **9** | **Photo Upload (E4)** — File → Storage → DB | 🟡 Next |
+| **10** | **Tests Mở rộng (C)** — Repo tests + widget tests | 🟡 In Progress |
+| **11** | **UI Polish (D)** — Empty states, Infinite scroll, A11y | 🟡 Partial |
+| **12** | **Notifications (E5)** — Backend + real-time | ❌ Not Started |
 
 ---
 
