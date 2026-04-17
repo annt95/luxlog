@@ -1,10 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/env.dart';
 
 class SupabaseService {
   static Future<void> initialize() async {
     if (!Env.hasSupabaseConfig) {
-      print('WARNING: Supabase configuration is missing. Running in mock mode or error will occur.');
+      debugPrint('WARNING: Supabase configuration is missing. Running in mock mode or error will occur.');
       return;
     }
     await Supabase.initialize(

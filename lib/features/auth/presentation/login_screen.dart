@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/core/errors/app_exception.dart';
 import 'package:luxlog/features/auth/providers/auth_provider.dart';
 
 /// Auth: Login Screen — Darkroom editorial style
@@ -37,8 +38,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) context.go('/');
     } catch (e) {
       if (mounted) {
+        final message = e is AppException ? e.message : 'Đăng nhập không thành công. Vui lòng thử lại.';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
+          SnackBar(content: Text(message)),
         );
       }
     } finally {
@@ -51,8 +53,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref.read(authRepositoryProvider).signInWithGoogle();
     } catch (e) {
       if (mounted) {
+        final message = e is AppException ? e.message : 'Đăng nhập Google không thành công. Vui lòng thử lại.';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
+          SnackBar(content: Text(message)),
         );
       }
     }

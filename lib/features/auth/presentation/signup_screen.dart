@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/core/errors/app_exception.dart';
 import 'package:luxlog/features/auth/providers/auth_provider.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
@@ -31,26 +32,61 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Future<void> _signUp() async {
-    // Validate password
-    if (_passCtrl.text != _confirmPassCtrl.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match')),
-      );
+    final name = _nameCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
+    final password = _passCtrl.text;
+    final confirmPassword = _confirmPassCtrl.text;
+
+    // 1. Validate name
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập tên hiển thị')));
+      return;
+    }
+    if (name.length > 50) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tên hiển thị quá dài (tối đa 50 ký tự)')));
+      return;
+    }
+
+    // 2. Validate email
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Định dạng email không hợp lệ')));
+      return;
+    }
+
+    // 3. Validate password strength
+    if (password.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mật khẩu phải có ít nhất 8 ký tự')));
+      return;
+    }
+    if (!password.contains(RegExp(r'[A-Z]'))) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mật khẩu phải chứa ít nhất một chữ hoa')));
+      return;
+    }
+    if (!password.contains(RegExp(r'[0-9]'))) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mật khẩu phải chứa ít nhất một chữ số')));
+      return;
+    }
+
+    // 4. Validate confirm password
+    if (password != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mật khẩu xác nhận không khớp')));
       return;
     }
     
     setState(() => _loading = true);
     try {
       await ref.read(authRepositoryProvider).signUp(
-        email: _emailCtrl.text.trim(),
-        password: _passCtrl.text,
-        displayName: _nameCtrl.text.trim(),
+        email: email,
+        password: password,
+        displayName: name,
       );
       if (mounted) context.go('/');
     } catch (e) {
       if (mounted) {
+        final message = e is AppException ? e.message : 'Đăng ký không thành công. Vui lòng thử lại.';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
+          SnackBar(content: Text(message)),
         );
       }
     } finally {

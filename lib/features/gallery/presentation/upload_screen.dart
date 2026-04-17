@@ -1,35 +1,42 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:exif/exif.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/core/errors/app_exception.dart';
 import 'package:luxlog/shared/widgets/exif_badge.dart';
 import 'package:luxlog/shared/widgets/tag_input_widget.dart';
 import 'package:luxlog/shared/widgets/tag_chip.dart';
+import 'package:luxlog/features/gallery/providers/photo_provider.dart';
 
-/// Upload screen — image picker + EXIF parse + preview
-class UploadScreen extends StatefulWidget {
+/// Upload screen — image picker + EXIF parse + preview + Film Mode
+class UploadScreen extends ConsumerStatefulWidget {
   const UploadScreen({super.key});
 
   @override
-  State<UploadScreen> createState() => _UploadScreenState();
+  ConsumerState<UploadScreen> createState() => _UploadScreenState();
 }
 
-class _UploadScreenState extends State<UploadScreen> {
+class _UploadScreenState extends ConsumerState<UploadScreen> {
   XFile? _selectedImage;
   Uint8List? _selectedImageBytes;
   ExifInfo? _parsedExif;
   bool _parsingExif = false;
   bool _uploading = false;
   int _currentStep = 0; // 0: pick, 1: details, 2: uploading
+  String? _errorMessage;
 
   final _captionCtrl = TextEditingController();
   final _titleCtrl = TextEditingController();
+  final _filmCameraCtrl = TextEditingController();
+  final _filmStockCtrl = TextEditingController();
   List<String> _tags = [];
   List<String> _selectedCategories = []; // category slugs
   bool _shareGps = false;
   bool _allowDownload = true;
+  bool _isFilm = false;
   String _selectedLicense = 'CC BY 4.0';
 
   // Mock categories (will be replaced with DB data)
@@ -48,10 +55,14 @@ class _UploadScreenState extends State<UploadScreen> {
 
   static const _licenses = ['CC BY 4.0', 'CC BY-SA 4.0', 'CC BY-NC 4.0', 'All Rights Reserved'];
 
+  static const int _maxFileSizeBytes = 20 * 1024 * 1024; // 20MB
+
   @override
   void dispose() {
     _captionCtrl.dispose();
     _titleCtrl.dispose();
+    _filmCameraCtrl.dispose();
+    _filmStockCtrl.dispose();
     super.dispose();
   }
 
@@ -61,11 +72,26 @@ class _UploadScreenState extends State<UploadScreen> {
     if (picked == null) return;
 
     final bytes = await picked.readAsBytes();
+
+    // File size validation
+    if (bytes.length > _maxFileSizeBytes) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('File size exceeds 20MB limit. Please choose a smaller image.'),
+            backgroundColor: AppColors.errorContainer,
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() {
       _selectedImage = picked;
       _selectedImageBytes = bytes;
       _parsedExif = null;
       _parsingExif = true;
+      _errorMessage = null;
     });
 
     // Parse EXIF
@@ -170,13 +196,82 @@ class _UploadScreenState extends State<UploadScreen> {
   }
 
   Future<void> _upload() async {
+    // Validate required fields
+    if (_titleCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add a title for your photo')),
+      );
+      return;
+    }
+    if (_titleCtrl.text.trim().length > 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Title must be under 200 characters')),
+      );
+      return;
+    }
+    if (_captionCtrl.text.length > 2000) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Caption must be under 2000 characters')),
+      );
+      return;
+    }
+    if (_tags.length > 30) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Maximum 30 tags allowed')),
+      );
+      return;
+    }
+
     setState(() {
       _uploading = true;
       _currentStep = 2;
+      _errorMessage = null;
     });
-    // TODO: Supabase upload
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) Navigator.of(context).pop();
+
+    try {
+      await ref.read(photoRepositoryProvider).uploadPhoto(
+        fileBytes: _selectedImageBytes!,
+        fileName: _selectedImage!.name,
+        title: _titleCtrl.text.trim(),
+        caption: _captionCtrl.text.trim(),
+        license: _selectedLicense,
+        allowDownload: _allowDownload,
+        isFilm: _isFilm,
+        filmStock: _isFilm ? _filmStockCtrl.text.trim() : null,
+        filmCamera: _isFilm ? _filmCameraCtrl.text.trim() : null,
+        camera: _parsedExif?.camera,
+        lens: _parsedExif?.lens,
+        iso: _parsedExif?.iso,
+        aperture: _parsedExif?.aperture,
+        shutterSpeed: _parsedExif?.shutterSpeed,
+        focalLength: _parsedExif?.focalLength,
+        latitude: _parsedExif?.latitude,
+        longitude: _parsedExif?.longitude,
+        shareGps: _shareGps,
+        tagNames: _tags,
+        categoryIds: _selectedCategories,
+      );
+      // Invalidate feed so new photo appears
+      ref.invalidate(photoFeedProvider);
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      final message = e is AppException
+          ? e.message
+          : 'Upload failed. Please try again.';
+      if (mounted) {
+        setState(() {
+          _uploading = false;
+          _currentStep = 1;
+          _errorMessage = message;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: AppColors.errorContainer,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -213,6 +308,10 @@ class _UploadScreenState extends State<UploadScreen> {
                     onLicenseChanged: (v) => setState(() => _selectedLicense = v!),
                     onBack: () => setState(() => _currentStep = 0),
                     onUpload: _upload,
+                    isFilm: _isFilm,
+                    onFilmChanged: (v) => setState(() => _isFilm = v),
+                    filmCameraCtrl: _filmCameraCtrl,
+                    filmStockCtrl: _filmStockCtrl,
                   )
                 : const _UploadingStep(),
       ),
@@ -366,6 +465,10 @@ class _DetailsStep extends StatelessWidget {
   final ValueChanged<String?> onLicenseChanged;
   final VoidCallback onBack;
   final VoidCallback onUpload;
+  final bool isFilm;
+  final ValueChanged<bool> onFilmChanged;
+  final TextEditingController filmCameraCtrl;
+  final TextEditingController filmStockCtrl;
 
   const _DetailsStep({
     required this.imageBytes,
@@ -387,6 +490,10 @@ class _DetailsStep extends StatelessWidget {
     required this.onLicenseChanged,
     required this.onBack,
     required this.onUpload,
+    required this.isFilm,
+    required this.onFilmChanged,
+    required this.filmCameraCtrl,
+    required this.filmStockCtrl,
   });
 
   void _showSuggestDialog(BuildContext context) {
@@ -623,6 +730,42 @@ class _DetailsStep extends StatelessWidget {
                       ],
                     ),
                   ),
+
+                const SizedBox(height: 20),
+
+                // Film Mode Toggle
+                _ToggleRow(
+                  icon: Icons.camera_roll_outlined,
+                  title: 'Shot on Film',
+                  subtitle: 'Manually enter camera and film stock info',
+                  value: isFilm,
+                  onChanged: onFilmChanged,
+                ),
+
+                if (isFilm) ...[
+                  const SizedBox(height: 16),
+                  _SectionLabel('Film Details'),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: filmCameraCtrl,
+                    style: AppTextStyles.body,
+                    decoration: const InputDecoration(
+                      labelText: 'Film Camera',
+                      hintText: 'e.g. Contax G2',
+                      prefixIcon: Icon(Icons.camera_alt_outlined, size: 18),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: filmStockCtrl,
+                    style: AppTextStyles.body,
+                    decoration: const InputDecoration(
+                      labelText: 'Film Stock',
+                      hintText: 'e.g. Kodak Portra 400',
+                      prefixIcon: Icon(Icons.camera_roll_outlined, size: 18),
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 20),
 

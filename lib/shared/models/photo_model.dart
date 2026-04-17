@@ -11,6 +11,7 @@ class PhotoModel with _$PhotoModel {
     @JsonKey(name: 'user_id') required String userId,
     String? title,
     String? description,
+    String? caption,
     @JsonKey(name: 'image_url') required String imageUrl,
     int? width,
     int? height,
@@ -24,12 +25,19 @@ class PhotoModel with _$PhotoModel {
     @JsonKey(name: 'focal_length') String? focalLength,
     double? latitude,
     double? longitude,
+
+    // Film Photography
+    @JsonKey(name: 'is_film') @Default(false) bool isFilm,
+    @JsonKey(name: 'film_stock') String? filmStock,
+    @JsonKey(name: 'film_camera') String? filmCamera,
     
     // Meta
     @JsonKey(name: 'views_count') @Default(0) int viewsCount,
     @JsonKey(name: 'likes_count') @Default(0) int likesCount,
     @JsonKey(name: 'comments_count') @Default(0) int commentsCount,
     @JsonKey(name: 'is_public') @Default(true) bool isPublic,
+    @JsonKey(name: 'allow_download') @Default(true) bool allowDownload,
+    @Default('CC BY 4.0') String? license,
     @JsonKey(name: 'created_at') DateTime? createdAt,
 
     // Nested User (populated via join)

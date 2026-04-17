@@ -26,6 +26,7 @@ mixin _$PhotoModel {
   String get userId => throw _privateConstructorUsedError;
   String? get title => throw _privateConstructorUsedError;
   String? get description => throw _privateConstructorUsedError;
+  String? get caption => throw _privateConstructorUsedError;
   @JsonKey(name: 'image_url')
   String get imageUrl => throw _privateConstructorUsedError;
   int? get width => throw _privateConstructorUsedError;
@@ -39,7 +40,14 @@ mixin _$PhotoModel {
   @JsonKey(name: 'focal_length')
   String? get focalLength => throw _privateConstructorUsedError;
   double? get latitude => throw _privateConstructorUsedError;
-  double? get longitude => throw _privateConstructorUsedError; // Meta
+  double? get longitude =>
+      throw _privateConstructorUsedError; // Film Photography
+  @JsonKey(name: 'is_film')
+  bool get isFilm => throw _privateConstructorUsedError;
+  @JsonKey(name: 'film_stock')
+  String? get filmStock => throw _privateConstructorUsedError;
+  @JsonKey(name: 'film_camera')
+  String? get filmCamera => throw _privateConstructorUsedError; // Meta
   @JsonKey(name: 'views_count')
   int get viewsCount => throw _privateConstructorUsedError;
   @JsonKey(name: 'likes_count')
@@ -48,6 +56,9 @@ mixin _$PhotoModel {
   int get commentsCount => throw _privateConstructorUsedError;
   @JsonKey(name: 'is_public')
   bool get isPublic => throw _privateConstructorUsedError;
+  @JsonKey(name: 'allow_download')
+  bool get allowDownload => throw _privateConstructorUsedError;
+  String? get license => throw _privateConstructorUsedError;
   @JsonKey(name: 'created_at')
   DateTime? get createdAt => throw _privateConstructorUsedError; // Nested User (populated via join)
   UserModel? get user => throw _privateConstructorUsedError;
@@ -74,6 +85,7 @@ abstract class $PhotoModelCopyWith<$Res> {
     @JsonKey(name: 'user_id') String userId,
     String? title,
     String? description,
+    String? caption,
     @JsonKey(name: 'image_url') String imageUrl,
     int? width,
     int? height,
@@ -85,10 +97,15 @@ abstract class $PhotoModelCopyWith<$Res> {
     @JsonKey(name: 'focal_length') String? focalLength,
     double? latitude,
     double? longitude,
+    @JsonKey(name: 'is_film') bool isFilm,
+    @JsonKey(name: 'film_stock') String? filmStock,
+    @JsonKey(name: 'film_camera') String? filmCamera,
     @JsonKey(name: 'views_count') int viewsCount,
     @JsonKey(name: 'likes_count') int likesCount,
     @JsonKey(name: 'comments_count') int commentsCount,
     @JsonKey(name: 'is_public') bool isPublic,
+    @JsonKey(name: 'allow_download') bool allowDownload,
+    String? license,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     UserModel? user,
   });
@@ -115,6 +132,7 @@ class _$PhotoModelCopyWithImpl<$Res, $Val extends PhotoModel>
     Object? userId = null,
     Object? title = freezed,
     Object? description = freezed,
+    Object? caption = freezed,
     Object? imageUrl = null,
     Object? width = freezed,
     Object? height = freezed,
@@ -126,10 +144,15 @@ class _$PhotoModelCopyWithImpl<$Res, $Val extends PhotoModel>
     Object? focalLength = freezed,
     Object? latitude = freezed,
     Object? longitude = freezed,
+    Object? isFilm = null,
+    Object? filmStock = freezed,
+    Object? filmCamera = freezed,
     Object? viewsCount = null,
     Object? likesCount = null,
     Object? commentsCount = null,
     Object? isPublic = null,
+    Object? allowDownload = null,
+    Object? license = freezed,
     Object? createdAt = freezed,
     Object? user = freezed,
   }) {
@@ -150,6 +173,10 @@ class _$PhotoModelCopyWithImpl<$Res, $Val extends PhotoModel>
             description: freezed == description
                 ? _value.description
                 : description // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            caption: freezed == caption
+                ? _value.caption
+                : caption // ignore: cast_nullable_to_non_nullable
                       as String?,
             imageUrl: null == imageUrl
                 ? _value.imageUrl
@@ -195,6 +222,18 @@ class _$PhotoModelCopyWithImpl<$Res, $Val extends PhotoModel>
                 ? _value.longitude
                 : longitude // ignore: cast_nullable_to_non_nullable
                       as double?,
+            isFilm: null == isFilm
+                ? _value.isFilm
+                : isFilm // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            filmStock: freezed == filmStock
+                ? _value.filmStock
+                : filmStock // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            filmCamera: freezed == filmCamera
+                ? _value.filmCamera
+                : filmCamera // ignore: cast_nullable_to_non_nullable
+                      as String?,
             viewsCount: null == viewsCount
                 ? _value.viewsCount
                 : viewsCount // ignore: cast_nullable_to_non_nullable
@@ -211,6 +250,14 @@ class _$PhotoModelCopyWithImpl<$Res, $Val extends PhotoModel>
                 ? _value.isPublic
                 : isPublic // ignore: cast_nullable_to_non_nullable
                       as bool,
+            allowDownload: null == allowDownload
+                ? _value.allowDownload
+                : allowDownload // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            license: freezed == license
+                ? _value.license
+                : license // ignore: cast_nullable_to_non_nullable
+                      as String?,
             createdAt: freezed == createdAt
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
@@ -253,6 +300,7 @@ abstract class _$$PhotoModelImplCopyWith<$Res>
     @JsonKey(name: 'user_id') String userId,
     String? title,
     String? description,
+    String? caption,
     @JsonKey(name: 'image_url') String imageUrl,
     int? width,
     int? height,
@@ -264,10 +312,15 @@ abstract class _$$PhotoModelImplCopyWith<$Res>
     @JsonKey(name: 'focal_length') String? focalLength,
     double? latitude,
     double? longitude,
+    @JsonKey(name: 'is_film') bool isFilm,
+    @JsonKey(name: 'film_stock') String? filmStock,
+    @JsonKey(name: 'film_camera') String? filmCamera,
     @JsonKey(name: 'views_count') int viewsCount,
     @JsonKey(name: 'likes_count') int likesCount,
     @JsonKey(name: 'comments_count') int commentsCount,
     @JsonKey(name: 'is_public') bool isPublic,
+    @JsonKey(name: 'allow_download') bool allowDownload,
+    String? license,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     UserModel? user,
   });
@@ -294,6 +347,7 @@ class __$$PhotoModelImplCopyWithImpl<$Res>
     Object? userId = null,
     Object? title = freezed,
     Object? description = freezed,
+    Object? caption = freezed,
     Object? imageUrl = null,
     Object? width = freezed,
     Object? height = freezed,
@@ -305,10 +359,15 @@ class __$$PhotoModelImplCopyWithImpl<$Res>
     Object? focalLength = freezed,
     Object? latitude = freezed,
     Object? longitude = freezed,
+    Object? isFilm = null,
+    Object? filmStock = freezed,
+    Object? filmCamera = freezed,
     Object? viewsCount = null,
     Object? likesCount = null,
     Object? commentsCount = null,
     Object? isPublic = null,
+    Object? allowDownload = null,
+    Object? license = freezed,
     Object? createdAt = freezed,
     Object? user = freezed,
   }) {
@@ -329,6 +388,10 @@ class __$$PhotoModelImplCopyWithImpl<$Res>
         description: freezed == description
             ? _value.description
             : description // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        caption: freezed == caption
+            ? _value.caption
+            : caption // ignore: cast_nullable_to_non_nullable
                   as String?,
         imageUrl: null == imageUrl
             ? _value.imageUrl
@@ -374,6 +437,18 @@ class __$$PhotoModelImplCopyWithImpl<$Res>
             ? _value.longitude
             : longitude // ignore: cast_nullable_to_non_nullable
                   as double?,
+        isFilm: null == isFilm
+            ? _value.isFilm
+            : isFilm // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        filmStock: freezed == filmStock
+            ? _value.filmStock
+            : filmStock // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        filmCamera: freezed == filmCamera
+            ? _value.filmCamera
+            : filmCamera // ignore: cast_nullable_to_non_nullable
+                  as String?,
         viewsCount: null == viewsCount
             ? _value.viewsCount
             : viewsCount // ignore: cast_nullable_to_non_nullable
@@ -390,6 +465,14 @@ class __$$PhotoModelImplCopyWithImpl<$Res>
             ? _value.isPublic
             : isPublic // ignore: cast_nullable_to_non_nullable
                   as bool,
+        allowDownload: null == allowDownload
+            ? _value.allowDownload
+            : allowDownload // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        license: freezed == license
+            ? _value.license
+            : license // ignore: cast_nullable_to_non_nullable
+                  as String?,
         createdAt: freezed == createdAt
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
@@ -411,6 +494,7 @@ class _$PhotoModelImpl implements _PhotoModel {
     @JsonKey(name: 'user_id') required this.userId,
     this.title,
     this.description,
+    this.caption,
     @JsonKey(name: 'image_url') required this.imageUrl,
     this.width,
     this.height,
@@ -422,10 +506,15 @@ class _$PhotoModelImpl implements _PhotoModel {
     @JsonKey(name: 'focal_length') this.focalLength,
     this.latitude,
     this.longitude,
+    @JsonKey(name: 'is_film') this.isFilm = false,
+    @JsonKey(name: 'film_stock') this.filmStock,
+    @JsonKey(name: 'film_camera') this.filmCamera,
     @JsonKey(name: 'views_count') this.viewsCount = 0,
     @JsonKey(name: 'likes_count') this.likesCount = 0,
     @JsonKey(name: 'comments_count') this.commentsCount = 0,
     @JsonKey(name: 'is_public') this.isPublic = true,
+    @JsonKey(name: 'allow_download') this.allowDownload = true,
+    this.license = 'CC BY 4.0',
     @JsonKey(name: 'created_at') this.createdAt,
     this.user,
   });
@@ -442,6 +531,8 @@ class _$PhotoModelImpl implements _PhotoModel {
   final String? title;
   @override
   final String? description;
+  @override
+  final String? caption;
   @override
   @JsonKey(name: 'image_url')
   final String imageUrl;
@@ -468,6 +559,16 @@ class _$PhotoModelImpl implements _PhotoModel {
   final double? latitude;
   @override
   final double? longitude;
+  // Film Photography
+  @override
+  @JsonKey(name: 'is_film')
+  final bool isFilm;
+  @override
+  @JsonKey(name: 'film_stock')
+  final String? filmStock;
+  @override
+  @JsonKey(name: 'film_camera')
+  final String? filmCamera;
   // Meta
   @override
   @JsonKey(name: 'views_count')
@@ -482,6 +583,12 @@ class _$PhotoModelImpl implements _PhotoModel {
   @JsonKey(name: 'is_public')
   final bool isPublic;
   @override
+  @JsonKey(name: 'allow_download')
+  final bool allowDownload;
+  @override
+  @JsonKey()
+  final String? license;
+  @override
   @JsonKey(name: 'created_at')
   final DateTime? createdAt;
   // Nested User (populated via join)
@@ -490,7 +597,7 @@ class _$PhotoModelImpl implements _PhotoModel {
 
   @override
   String toString() {
-    return 'PhotoModel(id: $id, userId: $userId, title: $title, description: $description, imageUrl: $imageUrl, width: $width, height: $height, camera: $camera, lens: $lens, iso: $iso, aperture: $aperture, shutterSpeed: $shutterSpeed, focalLength: $focalLength, latitude: $latitude, longitude: $longitude, viewsCount: $viewsCount, likesCount: $likesCount, commentsCount: $commentsCount, isPublic: $isPublic, createdAt: $createdAt, user: $user)';
+    return 'PhotoModel(id: $id, userId: $userId, title: $title, description: $description, caption: $caption, imageUrl: $imageUrl, width: $width, height: $height, camera: $camera, lens: $lens, iso: $iso, aperture: $aperture, shutterSpeed: $shutterSpeed, focalLength: $focalLength, latitude: $latitude, longitude: $longitude, isFilm: $isFilm, filmStock: $filmStock, filmCamera: $filmCamera, viewsCount: $viewsCount, likesCount: $likesCount, commentsCount: $commentsCount, isPublic: $isPublic, allowDownload: $allowDownload, license: $license, createdAt: $createdAt, user: $user)';
   }
 
   @override
@@ -503,6 +610,7 @@ class _$PhotoModelImpl implements _PhotoModel {
             (identical(other.title, title) || other.title == title) &&
             (identical(other.description, description) ||
                 other.description == description) &&
+            (identical(other.caption, caption) || other.caption == caption) &&
             (identical(other.imageUrl, imageUrl) ||
                 other.imageUrl == imageUrl) &&
             (identical(other.width, width) || other.width == width) &&
@@ -520,6 +628,11 @@ class _$PhotoModelImpl implements _PhotoModel {
                 other.latitude == latitude) &&
             (identical(other.longitude, longitude) ||
                 other.longitude == longitude) &&
+            (identical(other.isFilm, isFilm) || other.isFilm == isFilm) &&
+            (identical(other.filmStock, filmStock) ||
+                other.filmStock == filmStock) &&
+            (identical(other.filmCamera, filmCamera) ||
+                other.filmCamera == filmCamera) &&
             (identical(other.viewsCount, viewsCount) ||
                 other.viewsCount == viewsCount) &&
             (identical(other.likesCount, likesCount) ||
@@ -528,6 +641,9 @@ class _$PhotoModelImpl implements _PhotoModel {
                 other.commentsCount == commentsCount) &&
             (identical(other.isPublic, isPublic) ||
                 other.isPublic == isPublic) &&
+            (identical(other.allowDownload, allowDownload) ||
+                other.allowDownload == allowDownload) &&
+            (identical(other.license, license) || other.license == license) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.user, user) || other.user == user));
@@ -541,6 +657,7 @@ class _$PhotoModelImpl implements _PhotoModel {
     userId,
     title,
     description,
+    caption,
     imageUrl,
     width,
     height,
@@ -552,10 +669,15 @@ class _$PhotoModelImpl implements _PhotoModel {
     focalLength,
     latitude,
     longitude,
+    isFilm,
+    filmStock,
+    filmCamera,
     viewsCount,
     likesCount,
     commentsCount,
     isPublic,
+    allowDownload,
+    license,
     createdAt,
     user,
   ]);
@@ -580,6 +702,7 @@ abstract class _PhotoModel implements PhotoModel {
     @JsonKey(name: 'user_id') required final String userId,
     final String? title,
     final String? description,
+    final String? caption,
     @JsonKey(name: 'image_url') required final String imageUrl,
     final int? width,
     final int? height,
@@ -591,10 +714,15 @@ abstract class _PhotoModel implements PhotoModel {
     @JsonKey(name: 'focal_length') final String? focalLength,
     final double? latitude,
     final double? longitude,
+    @JsonKey(name: 'is_film') final bool isFilm,
+    @JsonKey(name: 'film_stock') final String? filmStock,
+    @JsonKey(name: 'film_camera') final String? filmCamera,
     @JsonKey(name: 'views_count') final int viewsCount,
     @JsonKey(name: 'likes_count') final int likesCount,
     @JsonKey(name: 'comments_count') final int commentsCount,
     @JsonKey(name: 'is_public') final bool isPublic,
+    @JsonKey(name: 'allow_download') final bool allowDownload,
+    final String? license,
     @JsonKey(name: 'created_at') final DateTime? createdAt,
     final UserModel? user,
   }) = _$PhotoModelImpl;
@@ -611,6 +739,8 @@ abstract class _PhotoModel implements PhotoModel {
   String? get title;
   @override
   String? get description;
+  @override
+  String? get caption;
   @override
   @JsonKey(name: 'image_url')
   String get imageUrl;
@@ -635,7 +765,16 @@ abstract class _PhotoModel implements PhotoModel {
   @override
   double? get latitude;
   @override
-  double? get longitude; // Meta
+  double? get longitude; // Film Photography
+  @override
+  @JsonKey(name: 'is_film')
+  bool get isFilm;
+  @override
+  @JsonKey(name: 'film_stock')
+  String? get filmStock;
+  @override
+  @JsonKey(name: 'film_camera')
+  String? get filmCamera; // Meta
   @override
   @JsonKey(name: 'views_count')
   int get viewsCount;
@@ -648,6 +787,11 @@ abstract class _PhotoModel implements PhotoModel {
   @override
   @JsonKey(name: 'is_public')
   bool get isPublic;
+  @override
+  @JsonKey(name: 'allow_download')
+  bool get allowDownload;
+  @override
+  String? get license;
   @override
   @JsonKey(name: 'created_at')
   DateTime? get createdAt; // Nested User (populated via join)

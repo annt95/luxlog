@@ -90,6 +90,10 @@ class ExifInfo {
   final double? latitude;
   final double? longitude;
   final bool? flashUsed;
+  // Film photography
+  final bool isFilm;
+  final String? filmStock;
+  final String? filmCamera;
 
   const ExifInfo({
     this.camera,
@@ -102,6 +106,9 @@ class ExifInfo {
     this.latitude,
     this.longitude,
     this.flashUsed,
+    this.isFilm = false,
+    this.filmStock,
+    this.filmCamera,
   });
 
   bool get hasGps => latitude != null && longitude != null;
