@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/features/profile/providers/follow_state_provider.dart';
 import 'package:luxlog/features/profile/providers/user_provider.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
+import 'package:luxlog/features/portfolio/providers/portfolio_provider.dart';
 
 /// User Profile Screen — portfolio preview + photo grid + bio
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -56,52 +57,74 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         final profileId = profile['id'] as String?;
         final isOwnProfile = widget.username == 'me';
         final isFollowing = ref.watch(followStateProvider).contains(profileUsername);
+        final photoRepository = ref.watch(photoRepositoryProvider);
+        final statsFuture = profileId == null
+            ? Future.value(const [0, 0])
+            : Future.wait<int>([
+                photoRepository.countByUser(profileId),
+                photoRepository.totalViewsByUser(profileId),
+              ]);
 
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          body: NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) => [
-              SliverAppBar(
-                expandedHeight: 340,
-                pinned: true,
-                backgroundColor: AppColors.background,
-                elevation: 0,
-                leading: _GlassIconButton(
-                  icon: Icons.arrow_back,
-                  onTap: () => Navigator.of(context).maybePop(),
-                ),
-                actions: [
-                  _GlassIconButton(icon: Icons.share_outlined, onTap: () {}),
-                  _GlassIconButton(icon: Icons.more_horiz, onTap: () {}),
-                  const SizedBox(width: 8),
-                ],
-                flexibleSpace: FlexibleSpaceBar(
-                  collapseMode: CollapseMode.parallax,
-                  background: _ProfileHeader(
-                    profile: profile,
-                    isFollowing: isFollowing,
-                    showFollowActions: !isOwnProfile,
-                    onFollow: () => ref
-                        .read(followStateProvider.notifier)
-                        .toggleFollow(profileUsername),
+        return FutureBuilder<List<int>>(
+          future: statsFuture,
+          builder: (context, statsSnapshot) {
+            final photoCount = statsSnapshot.data?.first ?? 0;
+            final viewsCount = statsSnapshot.data?.length == 2
+                ? statsSnapshot.data![1]
+                : 0;
+
+            return Scaffold(
+              backgroundColor: AppColors.background,
+              body: NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                  SliverAppBar(
+                    expandedHeight: 340,
+                    pinned: true,
+                    backgroundColor: AppColors.background,
+                    elevation: 0,
+                    leading: _GlassIconButton(
+                      icon: Icons.arrow_back,
+                      onTap: () => Navigator.of(context).maybePop(),
+                    ),
+                    actions: [
+                      _GlassIconButton(icon: Icons.share_outlined, onTap: () {}),
+                      _GlassIconButton(icon: Icons.more_horiz, onTap: () {}),
+                      const SizedBox(width: 8),
+                    ],
+                    flexibleSpace: FlexibleSpaceBar(
+                      collapseMode: CollapseMode.parallax,
+                      background: _ProfileHeader(
+                        profile: profile,
+                        isFollowing: isFollowing,
+                        showFollowActions: !isOwnProfile,
+                        photoCount: photoCount,
+                        viewsCount: viewsCount,
+                        onFollow: () => ref
+                            .read(followStateProvider.notifier)
+                            .toggleFollow(profileUsername),
+                      ),
+                    ),
                   ),
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _TabBarDelegate(tabCtrl: _tabCtrl, tabs: _tabs),
+                  ),
+                ],
+                body: TabBarView(
+                  controller: _tabCtrl,
+                  children: [
+                    _PhotosTab(username: profileUsername, profileId: profileId),
+                    _PortfolioTab(
+                      username: profileUsername,
+                      profileId: profileId,
+                    ),
+                    _CollectionsTab(),
+                    _GearTab(),
+                  ],
                 ),
               ),
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _TabBarDelegate(tabCtrl: _tabCtrl, tabs: _tabs),
-              ),
-            ],
-            body: TabBarView(
-              controller: _tabCtrl,
-              children: [
-                _PhotosTab(username: profileUsername, profileId: profileId),
-                _PortfolioTab(username: profileUsername),
-                _CollectionsTab(),
-                _GearTab(),
-              ],
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -114,12 +137,16 @@ class _ProfileHeader extends StatelessWidget {
   final Map<String, dynamic> profile;
   final bool isFollowing;
   final bool showFollowActions;
+  final int photoCount;
+  final int viewsCount;
   final VoidCallback onFollow;
 
   const _ProfileHeader({
     required this.profile,
     required this.isFollowing,
     required this.showFollowActions,
+    required this.photoCount,
+    required this.viewsCount,
     required this.onFollow,
   });
 
@@ -241,13 +268,13 @@ class _ProfileHeader extends StatelessWidget {
                 // Stats
                 Row(
                   children: [
-                    _StatBadge(value: '2.4k', label: 'Photos'),
+                    _StatBadge(value: '$photoCount', label: 'Photos'),
                     const SizedBox(width: 20),
                     _StatBadge(value: '$followersCount', label: 'Followers'),
                     const SizedBox(width: 20),
                     _StatBadge(value: '$followingCount', label: 'Following'),
                     const SizedBox(width: 20),
-                    _StatBadge(value: '847k', label: 'Views'),
+                    _StatBadge(value: '$viewsCount', label: 'Views'),
                   ],
                 ),
               ],
@@ -372,25 +399,25 @@ class _PhotosTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, _) {
-        final photosAsync = ref.watch(photoFeedProvider(page: 0, limit: 100));
-        return photosAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          ),
-          error: (_, __) => const Center(child: Text('Failed to load photos')),
-          data: (photos) {
-            final ownPhotos = photos.where((photo) {
-              if (profileId != null) {
-                return photo['user_id'] == profileId;
-              }
-              final profile = photo['profiles'] as Map<String, dynamic>?;
-              return profile?['username'] == username;
-            }).toList();
-
+        if (profileId == null) {
+          return const Center(child: Text('No photos yet'));
+        }
+        final repository = ref.watch(photoRepositoryProvider);
+        return FutureBuilder<List<Map<String, dynamic>>>(
+          future: repository.fetchByUser(userId: profileId!, page: 0, limit: 60),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData && !snapshot.hasError) {
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              );
+            }
+            if (snapshot.hasError) {
+              return const Center(child: Text('Failed to load photos'));
+            }
+            final ownPhotos = snapshot.data ?? const [];
             if (ownPhotos.isEmpty) {
               return const Center(child: Text('No photos yet'));
             }
-
             return MasonryGridView.count(
               crossAxisCount: 3,
               mainAxisSpacing: 3,
@@ -424,84 +451,90 @@ class _PhotosTab extends StatelessWidget {
 
 class _PortfolioTab extends StatelessWidget {
   final String username;
-  const _PortfolioTab({required this.username});
-
-  static const _projects = [
-    ('Tokyo After Rain', 'Street Documentary', 24),
-    ('Faces of Shinjuku', 'Portrait Series', 16),
-    ('Neon Nights', 'Urban Nightlife', 32),
-    ('Silent Gardens', 'Nature & Zen', 12),
-  ];
+  final String? profileId;
+  const _PortfolioTab({required this.username, required this.profileId});
 
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-      itemCount: _projects.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, i) {
-        final p = _projects[i];
-        return GestureDetector(
-          onTap: () => context.push('/portfolio/edit/${username}_proj_$i'),
-          child: Container(
-            height: 180,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4),
-              color: AppColors.surfaceContainerLow,
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  CachedNetworkImage(
-                    imageUrl: 'https://picsum.photos/seed/${username}_proj_$i/800/400',
-                    fit: BoxFit.cover,
-                  ),
-                  const DecoratedBox(
+    return Consumer(
+      builder: (context, ref, _) {
+        if (profileId == null) {
+          return const Center(child: Text('No portfolio yet'));
+        }
+        final blocksAsync = ref.watch(portfolioBlocksProvider(profileId!));
+        return blocksAsync.when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          ),
+          error: (_, __) => const Center(child: Text('Failed to load portfolio')),
+          data: (blocks) {
+            if (blocks.isEmpty) {
+              return const Center(child: Text('No portfolio yet'));
+            }
+            return ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+              itemCount: blocks.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, i) {
+                final block = blocks[i];
+                final title = block['title'] as String? ?? 'Portfolio block';
+                final subtitle =
+                    block['type'] as String? ?? 'Creative work';
+                final cover =
+                    block['image_url'] as String? ??
+                    block['cover_image'] as String? ??
+                    'https://picsum.photos/seed/${username}_proj_$i/800/400';
+                return GestureDetector(
+                  onTap: () => context.push('/portfolio/edit/${username}_proj_$i'),
+                  child: Container(
+                    height: 180,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Color(0xDD000000)],
+                      borderRadius: BorderRadius.circular(4),
+                      color: AppColors.surfaceContainerLow,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CachedNetworkImage(
+                            imageUrl: cover,
+                            fit: BoxFit.cover,
+                          ),
+                          const DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Colors.transparent, Color(0xDD000000)],
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 16,
+                            left: 16,
+                            right: 16,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(title, style: AppTextStyles.titleMedium),
+                                const SizedBox(height: 4),
+                                Text(subtitle, style: AppTextStyles.caption),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  Positioned(
-                    bottom: 16,
-                    left: 16,
-                    right: 16,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(p.$1, style: AppTextStyles.titleMedium),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryContainer,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(p.$2,
-                                  style: AppTextStyles.exifLabel
-                                      .copyWith(color: AppColors.primary)),
-                            ),
-                            const SizedBox(width: 8),
-                            Text('${p.$3} photos',
-                                style: AppTextStyles.caption),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ).animate(delay: Duration(milliseconds: i * 80)).fadeIn().slideY(begin: 0.05);
+                )
+                    .animate(delay: Duration(milliseconds: i * 80))
+                    .fadeIn()
+                    .slideY(begin: 0.05);
+              },
+            );
+          },
+        );
       },
     );
   }
