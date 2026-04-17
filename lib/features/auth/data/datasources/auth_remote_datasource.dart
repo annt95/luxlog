@@ -52,8 +52,18 @@ class AuthRemoteDataSource {
           'avatar_url': avatarUrl,
         });
       }
-    } catch (e) {
-      throw const NetworkException('Lỗi đồng bộ hồ sơ người dùng');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi đồng bộ hồ sơ người dùng (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi đồng bộ hồ sơ người dùng',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 }

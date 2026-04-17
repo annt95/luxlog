@@ -16,8 +16,18 @@ class UserRepository {
           .eq('username', username)
           .single();
       return response;
-    } catch (e) {
-      throw const NetworkException('Lỗi tải hồ sơ người dùng');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải hồ sơ người dùng (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải hồ sơ người dùng',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -31,8 +41,20 @@ class UserRepository {
           .eq('id', userId)
           .single();
       return response;
-    } catch (e) {
-      throw const NetworkException('Lỗi tải hồ sơ hiện tại');
+    } on AuthException {
+      rethrow;
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải hồ sơ hiện tại (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải hồ sơ hiện tại',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -44,8 +66,18 @@ class UserRepository {
           .eq('username', username)
           .single();
       return response['id'] as String;
-    } catch (e) {
-      throw const NetworkException('Không tìm thấy người dùng');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Không tìm thấy người dùng (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Không tìm thấy người dùng',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -60,8 +92,20 @@ class UserRepository {
       if (links != null) updates['links'] = links;
       
       await _client.from('profiles').update(updates).eq('id', userId);
-    } catch (e) {
-      throw const NetworkException('Lỗi cập nhật hồ sơ');
+    } on AuthException {
+      rethrow;
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi cập nhật hồ sơ (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi cập nhật hồ sơ',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -73,8 +117,20 @@ class UserRepository {
         'follower_id': userId,
         'following_id': targetId,
       });
-    } catch (e) {
-      throw const NetworkException('Lỗi theo dõi người dùng');
+    } on AuthException {
+      rethrow;
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi theo dõi người dùng (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi theo dõi người dùng',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -86,8 +142,20 @@ class UserRepository {
         'follower_id': userId,
         'following_id': targetId,
       });
-    } catch (e) {
-      throw const NetworkException('Lỗi bỏ theo dõi người dùng');
+    } on AuthException {
+      rethrow;
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi bỏ theo dõi người dùng (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi bỏ theo dõi người dùng',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -98,8 +166,18 @@ class UserRepository {
           .select('profiles!follower_id(*)')
           .eq('following_id', userId);
       return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      throw const NetworkException('Lỗi tải danh sách người theo dõi');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải danh sách người theo dõi (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải danh sách người theo dõi',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -110,8 +188,18 @@ class UserRepository {
           .select('profiles!following_id(*)')
           .eq('follower_id', userId);
       return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      throw const NetworkException('Lỗi tải danh sách đang theo dõi');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải danh sách đang theo dõi (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải danh sách đang theo dõi',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 }

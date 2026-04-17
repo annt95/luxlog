@@ -14,17 +14,29 @@ class PortfolioRepository {
           .select('blocks')
           .eq('user_id', userId)
           .single();
-      
-      if (response['blocks'] != null) {
-        return List<Map<String, dynamic>>.from(jsonDecode(response['blocks'] as String));
+
+      if (response['blocks'] is String) {
+        return List<Map<String, dynamic>>.from(
+          jsonDecode(response['blocks'] as String) as List<dynamic>,
+        );
+      }
+      if (response['blocks'] is List) {
+        return List<Map<String, dynamic>>.from(response['blocks'] as List);
       }
       return [];
-    } catch (e) {
+
+    } on PostgrestException catch (e, stackTrace) {
       if (e is PostgrestException && e.code == 'PGRST116') {
         // Not found, return empty portfolio
         return [];
       }
-      throw const NetworkException('Lỗi tải portfolio');
+      throw NetworkException(
+        'Lỗi tải portfolio (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException('Lỗi tải portfolio', cause: e, stackTrace: stackTrace);
     }
   }
 
@@ -36,8 +48,14 @@ class PortfolioRepository {
         'blocks': blocksJson,
         'updated_at': DateTime.now().toIso8601String(),
       });
-    } catch (e) {
-      throw const NetworkException('Lỗi lưu portfolio');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi lưu portfolio (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException('Lỗi lưu portfolio', cause: e, stackTrace: stackTrace);
     }
   }
 
@@ -51,8 +69,18 @@ class PortfolioRepository {
       
       final userId = userResponse['id'] as String;
       return await fetchPortfolio(userId);
-    } catch (e) {
-      throw const NetworkException('Lỗi tải portfolio công khai');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải portfolio công khai (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải portfolio công khai',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 }

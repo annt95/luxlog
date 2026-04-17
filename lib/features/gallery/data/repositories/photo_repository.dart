@@ -1,5 +1,6 @@
 import 'dart:typed_data';
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException, StorageException;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    hide AuthException, StorageException;
 import '../../../../core/errors/app_exception.dart';
 
 class PhotoRepository {
@@ -15,8 +16,94 @@ class PhotoRepository {
           .order('created_at', ascending: false)
           .range(page * limit, (page + 1) * limit - 1);
       return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      throw const NetworkException('Lỗi tải danh sách ảnh');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải danh sách ảnh (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải danh sách ảnh',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchByUser({
+    required String userId,
+    required int page,
+    int limit = 30,
+  }) async {
+    try {
+      final response = await _client
+          .from('photos')
+          .select('*, profiles(username, avatar_url)')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false)
+          .range(page * limit, (page + 1) * limit - 1);
+      return List<Map<String, dynamic>>.from(response);
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải ảnh của người dùng (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải ảnh của người dùng',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<int> countByUser(String userId) async {
+    try {
+      final response = await _client
+          .from('photos')
+          .select('id')
+          .eq('user_id', userId);
+      return response.length;
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi đếm số ảnh (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi đếm số ảnh',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<int> totalViewsByUser(String userId) async {
+    try {
+      final response = await _client
+          .from('photos')
+          .select('views_count')
+          .eq('user_id', userId);
+      var total = 0;
+      for (final row in response) {
+        total += (row['views_count'] as int?) ?? 0;
+      }
+      return total;
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải lượt xem (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải lượt xem',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -28,8 +115,18 @@ class PhotoRepository {
           .eq('id', id)
           .single();
       return response;
-    } catch (e) {
-      throw const NetworkException('Lỗi tải thông tin ảnh');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải thông tin ảnh (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải thông tin ảnh',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -111,9 +208,19 @@ class PhotoRepository {
       final photoId = response['id'] as String;
 
       return photoId;
-    } catch (e) {
+    } on PostgrestException catch (e, stackTrace) {
+      throw StorageException(
+        'Lỗi lưu metadata ảnh (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
       if (e is AuthException) rethrow;
-      throw const StorageException('Lỗi tải ảnh lên. Vui lòng thử lại.');
+      throw StorageException(
+        'Lỗi tải ảnh lên. Vui lòng thử lại.',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -122,8 +229,14 @@ class PhotoRepository {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) throw const AuthException();
       await _client.from('likes').insert({'photo_id': photoId, 'user_id': userId});
-    } catch (e) {
-      throw const NetworkException('Lỗi thích ảnh');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi thích ảnh (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException('Lỗi thích ảnh', cause: e, stackTrace: stackTrace);
     }
   }
 
@@ -132,8 +245,18 @@ class PhotoRepository {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) throw const AuthException();
       await _client.from('likes').delete().match({'photo_id': photoId, 'user_id': userId});
-    } catch (e) {
-      throw const NetworkException('Lỗi bỏ thích ảnh');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi bỏ thích ảnh (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi bỏ thích ảnh',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -146,8 +269,18 @@ class PhotoRepository {
         'user_id': userId,
         'text': text,
       });
-    } catch (e) {
-      throw const NetworkException('Lỗi gửi bình luận');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi gửi bình luận (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi gửi bình luận',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 }

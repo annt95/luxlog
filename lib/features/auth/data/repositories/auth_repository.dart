@@ -29,10 +29,10 @@ class AuthRepository {
         await _remoteDataSource.syncUserProfile(user);
       }
       return response;
-    } on supa.AuthException catch (e) {
-      throw AuthException(e.message);
-    } catch (e) {
-      throw UnknownException();
+    } on supa.AuthException catch (e, stackTrace) {
+      throw AuthException(e.message, cause: e, stackTrace: stackTrace);
+    } catch (e, stackTrace) {
+      throw UnknownException(cause: e, stackTrace: stackTrace);
     }
   }
 
@@ -45,10 +45,10 @@ class AuthRepository {
         email: email,
         password: password,
       );
-    } on supa.AuthException catch (e) {
-      throw AuthException(e.message);
-    } catch (e) {
-      throw UnknownException();
+    } on supa.AuthException catch (e, stackTrace) {
+      throw AuthException(e.message, cause: e, stackTrace: stackTrace);
+    } catch (e, stackTrace) {
+      throw UnknownException(cause: e, stackTrace: stackTrace);
     }
   }
 
@@ -60,8 +60,14 @@ class AuthRepository {
       if (user != null) {
         await _remoteDataSource.syncUserProfile(user);
       }
-    } catch (e) {
-      throw AuthException('Google sign in failed');
+    } on supa.AuthException catch (e, stackTrace) {
+      throw AuthException(e.message, cause: e, stackTrace: stackTrace);
+    } catch (e, stackTrace) {
+      throw AuthException(
+        'Google sign in failed',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -72,8 +78,14 @@ class AuthRepository {
       if (user != null) {
         await _remoteDataSource.syncUserProfile(user);
       }
-    } catch (e) {
-      throw AuthException('Facebook sign in failed');
+    } on supa.AuthException catch (e, stackTrace) {
+      throw AuthException(e.message, cause: e, stackTrace: stackTrace);
+    } catch (e, stackTrace) {
+      throw AuthException(
+        'Facebook sign in failed',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -81,8 +93,10 @@ class AuthRepository {
   Future<void> signOut() async {
     try {
       await _client.auth.signOut();
-    } catch (e) {
-      throw AuthException('Sign out failed');
+    } on supa.AuthException catch (e, stackTrace) {
+      throw AuthException(e.message, cause: e, stackTrace: stackTrace);
+    } catch (e, stackTrace) {
+      throw AuthException('Sign out failed', cause: e, stackTrace: stackTrace);
     }
   }
 
@@ -94,10 +108,10 @@ class AuthRepository {
   Future<void> resetPassword(String email) async {
     try {
       await _client.auth.resetPasswordForEmail(email);
-    } on supa.AuthException catch (e) {
-      throw AuthException(e.message);
-    } catch (e) {
-      throw UnknownException();
+    } on supa.AuthException catch (e, stackTrace) {
+      throw AuthException(e.message, cause: e, stackTrace: stackTrace);
+    } catch (e, stackTrace) {
+      throw UnknownException(cause: e, stackTrace: stackTrace);
     }
   }
 }

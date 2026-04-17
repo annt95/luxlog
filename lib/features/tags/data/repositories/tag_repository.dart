@@ -17,8 +17,14 @@ class TagRepository {
           .order('usage_count', ascending: false)
           .limit(10);
       return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      throw const NetworkException('Lỗi tìm kiếm tag');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tìm kiếm tag (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException('Lỗi tìm kiếm tag', cause: e, stackTrace: stackTrace);
     }
   }
 
@@ -32,8 +38,18 @@ class TagRepository {
           .order('usage_count', ascending: false)
           .limit(limit);
       return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      throw const NetworkException('Lỗi tải trending tags');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải trending tags (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải trending tags',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -47,8 +63,18 @@ class TagRepository {
       return List<Map<String, dynamic>>.from(
         response.map((r) => r['tags'] as Map<String, dynamic>),
       );
-    } catch (e) {
-      throw const NetworkException('Lỗi tải tags của ảnh');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải tags của ảnh (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải tags của ảnh',
+        cause: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -78,8 +104,14 @@ class TagRepository {
       return List<Map<String, dynamic>>.from(
         response.map((r) => r['photos'] as Map<String, dynamic>),
       );
-    } catch (e) {
-      throw const NetworkException('Lỗi tải ảnh theo tag');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải ảnh theo tag (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException('Lỗi tải ảnh theo tag', cause: e, stackTrace: stackTrace);
     }
   }
 
@@ -101,8 +133,14 @@ class TagRepository {
           'tag_id': tagId,
         });
       }
-    } catch (e) {
-      throw const NetworkException('Lỗi gắn tag cho ảnh');
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi gắn tag cho ảnh (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException('Lỗi gắn tag cho ảnh', cause: e, stackTrace: stackTrace);
     }
   }
 
