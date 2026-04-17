@@ -1,5 +1,5 @@
 -- Luxlog: Security Hardening - Missing RLS Policies
--- Migration 004
+-- Migration 006
 
 -- 1. Photos: DELETE policy (only owner)
 CREATE POLICY "Users can delete own photos" ON public.photos

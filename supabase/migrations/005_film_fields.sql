@@ -1,5 +1,5 @@
 -- Luxlog: Film Photography Fields + Upload Metadata
--- Migration 003
+-- Migration 005
 
 -- 1. Film photography columns
 ALTER TABLE public.photos ADD COLUMN IF NOT EXISTS film_stock TEXT;
