@@ -3,8 +3,8 @@ import 'package:luxlog/core/errors/app_exception.dart';
 
 void main() {
   group('AppException Tests', () {
-    test('NetworkException should have correct default message', () {
-      const exception = NetworkException();
+    test('NetworkException should store correct message', () {
+      const exception = NetworkException('Lỗi kết nối mạng');
       expect(exception.message, 'Lỗi kết nối mạng');
       expect(exception.toString(), 'Lỗi kết nối mạng');
     });
@@ -14,23 +14,23 @@ void main() {
       expect(exception.message, 'Custom error');
     });
 
-    test('AuthException should have correct default message', () {
-      const exception = AuthException();
+    test('AuthException should store correct message', () {
+      const exception = AuthException('Lỗi xác thực');
       expect(exception.message, 'Lỗi xác thực');
     });
 
-    test('StorageException should have correct default message', () {
-      const exception = StorageException();
+    test('StorageException should store correct message', () {
+      const exception = StorageException('Lỗi tải lên/tải xuống dữ liệu');
       expect(exception.message, 'Lỗi tải lên/tải xuống dữ liệu');
     });
 
-    test('ValidationException should have correct default message', () {
-      const exception = ValidationException();
+    test('ValidationException should store correct message', () {
+      const exception = ValidationException('Lỗi xác thực dữ liệu đầu vào');
       expect(exception.message, 'Lỗi xác thực dữ liệu đầu vào');
     });
 
-    test('UnknownException should have correct default message', () {
-      const exception = UnknownException();
+    test('UnknownException should store correct message', () {
+      const exception = UnknownException('Đã xảy ra lỗi không xác định');
       expect(exception.message, 'Đã xảy ra lỗi không xác định');
     });
   });

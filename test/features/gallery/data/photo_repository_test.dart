@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:luxlog/core/errors/app_exception.dart';
 import 'package:luxlog/features/gallery/data/repositories/photo_repository.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 
 class MockSupabaseClient extends Mock implements SupabaseClient {}
 class MockGoTrueClient extends Mock implements GoTrueClient {}

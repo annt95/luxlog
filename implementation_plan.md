@@ -1,6 +1,6 @@
-# E4. Photo Upload + Film Mode & Security Hardening
+# E4. Photo Upload + Film Mode, Security Hardening & Google Login
 
-Kế hoạch triển khai hai mục tiêu song song: hoàn thiện luồng Upload ảnh (bao gồm chế độ "Film Shot") và rà soát bảo mật toàn diện cho Luxlog.
+Kế hoạch triển khai ba mục tiêu song song: hoàn thiện luồng Upload ảnh (bao gồm chế độ "Film Shot"), rà soát bảo mật toàn diện, và tích hợp **Google OAuth Login** cho Luxlog.
 
 ---
 
@@ -362,23 +362,262 @@ Thay `print()` bằng `debugPrint()` (chỉ hiển thị ở debug mode) hoặc 
 
 ---
 
+## Phần 3: Google Login với Supabase
+
+### Tổng quan luồng Google OAuth (Web)
+```mermaid
+sequenceDiagram
+    participant U as User (Browser)
+    participant App as Flutter Web App
+    participant Supa as Supabase Auth
+    participant GCP as Google OAuth
+
+    U->>App: Click "Continue with Google"
+    App->>Supa: signInWithOAuth(google, redirectTo: siteUrl)
+    Supa->>GCP: Redirect to Google consent screen
+    GCP->>U: Show Google account picker
+    U->>GCP: Choose account & grant permission
+    GCP->>Supa: Auth code callback
+    Supa->>App: Redirect back to app with session tokens in URL hash
+    App->>App: Supabase SDK auto-parses tokens from URL
+    App->>App: authStateChanges fires → Router redirects to home
+    App->>Supa: syncUserProfile() → insert/update profiles table
+```
+
+---
+
+### 3.1 Cấu hình Google Cloud Console (Manual)
+
+Đã có OAuth Client credentials:
+- **Client ID**: `<REDACTED_CLIENT_ID>`
+- **Client Secret**: `<REDACTED_CLIENT_SECRET>`
+- **Project ID**: `dauntless-glow-493609-h6`
+
+> [!IMPORTANT]
+> **Bước thủ công trên Google Cloud Console** (https://console.cloud.google.com/apis/credentials):
+> 1. Mở OAuth Client `15408380458-...` → tab **"Authorized redirect URIs"**
+> 2. Thêm redirect URI của Supabase: `https://<YOUR_SUPABASE_PROJECT_REF>.supabase.co/auth/v1/callback`
+>    - Lấy project ref từ Supabase Dashboard → Settings → General
+> 3. Trong **"Authorized JavaScript origins"**, thêm:
+>    - `https://<YOUR_VERCEL_DOMAIN>` (ví dụ: `https://luxlog.vercel.app`)
+>    - `http://localhost:3000` (cho dev)
+> 4. Trong OAuth consent screen, đảm bảo đã thêm scope: `email`, `profile`, `openid`
+
+---
+
+### 3.2 Cấu hình Supabase Dashboard (Manual)
+
+> [!IMPORTANT]
+> **Bước thủ công trên Supabase Dashboard** (Authentication → Providers → Google):
+> 1. Enable Google provider
+> 2. Paste **Client ID**: `<REDACTED_CLIENT_ID>`
+> 3. Paste **Client Secret**: `<REDACTED_CLIENT_SECRET>`
+> 4. **Redirect URL** (copy từ Supabase dashboard) → dán vào Google Cloud Console ở bước 3.1
+> 5. Trong Supabase → Authentication → URL Configuration:
+>    - **Site URL**: `https://<YOUR_VERCEL_DOMAIN>` (trang chủ app)
+>    - **Redirect URLs** (whitelist): thêm cả `https://<YOUR_VERCEL_DOMAIN>/**` và `http://localhost:3000/**`
+
+---
+
+### 3.3 Refactor `signInWithGoogle()` — Web Redirect Flow
+
+#### [MODIFY] [auth_repository.dart](file:///Users/uyn/Desktop/An/35mm/luxlog/lib/features/auth/data/repositories/auth_repository.dart)
+
+Hiện tại `signInWithGoogle()` dùng `signInWithOAuth()` mặc định, **nhưng thiếu `redirectTo` parameter**. Trên web, Supabase OAuth sẽ redirect về Site URL sau khi login. Cần chỉ định rõ `redirectTo` để control flow:
+
+```dart
+// Social OAuth
+Future<void> signInWithGoogle() async {
+  try {
+    await _client.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: _getRedirectUrl(),  // ← NEW
+    );
+    // Note: on Web, this triggers a full page redirect.
+    // The session is auto-restored when the page reloads.
+    // syncUserProfile will be handled by the auth state listener.
+  } on supa.AuthException catch (e, stackTrace) {
+    throw AuthException(e.message, cause: e, stackTrace: stackTrace);
+  } catch (e, stackTrace) {
+    throw AuthException(
+      'Google sign in failed',
+      cause: e,
+      stackTrace: stackTrace,
+    );
+  }
+}
+
+/// Returns the redirect URL based on the current platform.
+String? _getRedirectUrl() {
+  // On web, redirect back to the current origin
+  // Supabase will append the auth tokens as URL hash fragments
+  if (kIsWeb) {
+    return Uri.base.origin;
+  }
+  return null; // On mobile, use deep link (future)
+}
+```
+
+**Key points:**
+- Trên Web, `signInWithOAuth` sẽ trigger **full page redirect** tới Google → quay lại app
+- Supabase JS SDK tự parse tokens từ URL hash (`#access_token=...&refresh_token=...`)
+- `syncUserProfile()` cần chạy sau khi user quay lại, via auth state listener (không phải inline)
+
+---
+
+### 3.4 Add Auth State Listener for Profile Sync
+
+#### [MODIFY] [auth_provider.dart](file:///Users/uyn/Desktop/An/35mm/luxlog/lib/features/auth/providers/auth_provider.dart)
+
+Thêm listener auto-sync profile khi login thành công (bao gồm OAuth return):
+
+```dart
+@riverpod
+Stream<AuthState> authState(AuthStateRef ref) {
+  final repository = ref.watch(authRepositoryProvider);
+  final stream = repository.authStateChanges;
+  
+  // Listen for sign-in events to auto-sync profile
+  ref.listen(authStateProvider, (prev, next) {
+    next.whenData((state) async {
+      if (state.event == AuthChangeEvent.signedIn && state.session?.user != null) {
+        try {
+          final datasource = ref.read(authRemoteDataSourceProvider);
+          await datasource.syncUserProfile(state.session!.user);
+        } catch (_) {
+          // Profile sync is best-effort; don't block login
+        }
+      }
+    });
+  });
+  
+  return stream;
+}
+```
+
+---
+
+### 3.5 Remove Facebook OAuth Placeholder
+
+#### [MODIFY] [auth_repository.dart](file:///Users/uyn/Desktop/An/35mm/luxlog/lib/features/auth/data/repositories/auth_repository.dart)
+
+Xóa `signInWithFacebook()` vì chưa có Facebook App ID. Giữ lại code nhưng mark `@Deprecated` hoặc xóa hoàn toàn.
+
+#### [MODIFY] [login_screen.dart](file:///Users/uyn/Desktop/An/35mm/luxlog/lib/features/auth/presentation/login_screen.dart)
+
+Xóa Facebook button khỏi UI:
+```diff
+- const SizedBox(height: 10),
+- _SocialButton(
+-   icon: Icons.facebook,
+-   label: 'Continue with Facebook',
+-   onTap: _signInWithFacebook,
+- ),
+```
+
+---
+
+### 3.6 Update CSP Header cho Google OAuth
+
+#### [MODIFY] [vercel.json](file:///Users/uyn/Desktop/An/35mm/luxlog/vercel.json)
+
+Thêm Google domains vào CSP `connect-src` và `script-src`:
+```diff
+- connect-src 'self' https://*.supabase.co wss://*.supabase.co;
++ connect-src 'self' https://*.supabase.co wss://*.supabase.co https://accounts.google.com https://oauth2.googleapis.com;
+```
+
+Thêm `form-action` để cho phép OAuth redirect:
+```diff
++ form-action 'self' https://accounts.google.com https://*.supabase.co;
+```
+
+---
+
+### 3.7 Handle OAuth Redirect in Router
+
+#### [MODIFY] [router.dart](file:///Users/uyn/Desktop/An/35mm/luxlog/lib/app/router.dart)
+
+Sau khi Google OAuth redirect về, URL sẽ có dạng `https://luxlog.vercel.app/#access_token=...`. Supabase SDK tự handle phần này, nhưng router redirect cần xử lý đúng:
+
+```dart
+redirect: (context, state) {
+  final session = SupabaseService.client.auth.currentSession;
+  final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/signup';
+
+  // After OAuth redirect, session might be available now
+  if (session != null && isLoggingIn) {
+    return '/';
+  }
+
+  // Protected routes
+  const protectedPrefixes = ['/upload', '/notifications'];
+  final isProtected = protectedPrefixes.any((p) => state.matchedLocation.startsWith(p));
+  if (session == null && isProtected) {
+    return '/login';
+  }
+
+  return null;
+},
+```
+
+Router hiện tại đã handle đúng — không cần thay đổi lớn. Chỉ cần đảm bảo `SupabaseService.client.auth.currentSession` trả về session đúng sau OAuth redirect.
+
+---
+
+### 3.8 Add Google Client ID to Env (Optional — for native mobile later)
+
+#### [MODIFY] [env.dart](file:///Users/uyn/Desktop/An/35mm/luxlog/lib/core/config/env.dart)
+
+```dart
+class Env {
+  static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL', defaultValue: '');
+  static const String supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
+  // Google OAuth — only needed for native mobile (google_sign_in package)
+  // On Web, OAuth redirects are handled entirely by Supabase
+  static const String googleClientId = String.fromEnvironment('GOOGLE_CLIENT_ID', defaultValue: '');
+
+  static bool get hasSupabaseConfig {
+    return supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
+  }
+}
+```
+
+> [!NOTE]
+> Trên **Web**, Google Client ID **không cần truyền vào Flutter app**.
+> Supabase server-side sử dụng Client ID/Secret đã cấu hình ở Dashboard.
+> `GOOGLE_CLIENT_ID` env var chỉ cần thiết nếu sau này implement native mobile login (dùng `google_sign_in` package).
+
+---
+
 ## Thứ tự Thực hiện
 
 | Bước | Công việc | Ước tính |
 |:---:|:---|:---:|
+| **Phần 1: Photo Upload** | | |
 | 1 | Tạo migration `003_film_fields.sql` | 5 phút |
 | 2 | Update `PhotoModel` + run `build_runner` | 10 phút |
 | 3 | Update `ExifInfo` model (thêm film fields) | 5 phút |
 | 4 | Implement `uploadPhoto()` trong `PhotoRepository` | 15 phút |
 | 5 | Update `photo_provider.dart` | 5 phút |
 | 6 | Update `upload_screen.dart` (Film UI + wire upload) | 25 phút |
+| **Phần 2: Security** | | |
 | 7 | Tạo migration `004_security_rls.sql` | 10 phút |
-| 8 | Update `vercel.json` (security headers) | 5 phút |
+| 8 | Update `vercel.json` (security headers + Google CSP) | 5 phút |
 | 9 | Add input validation (signup + upload) | 15 phút |
 | 10 | Sanitize error messages | 10 phút |
 | 11 | Remove debug prints | 2 phút |
-| 12 | Build & verify | 10 phút |
-| **Tổng** | | **~2 giờ** |
+| **Phần 3: Google Login** | | |
+| 12 | ⚙️ Cấu hình Google Cloud Console (manual) | 10 phút |
+| 13 | ⚙️ Cấu hình Supabase Dashboard — enable Google provider | 5 phút |
+| 14 | Refactor `signInWithGoogle()` + add `_getRedirectUrl()` | 10 phút |
+| 15 | Add auth state listener for profile sync | 10 phút |
+| 16 | Remove Facebook placeholder / Update Login UI | 5 phút |
+| 17 | Update CSP headers trong `vercel.json` | 5 phút |
+| 18 | Update `env.dart` (optional `GOOGLE_CLIENT_ID`) | 2 phút |
+| **Verify** | | |
+| 19 | Build & verify end-to-end | 15 phút |
+| **Tổng** | | **~2.5 giờ** |
 
 ---
 
@@ -388,13 +627,23 @@ Thay `print()` bằng `debugPrint()` (chỉ hiển thị ở debug mode) hoặc 
 - `flutter build web --release` — Ensure no compilation errors
 - `flutter analyze` — No new errors/warnings introduced
 
-### Manual
+### Manual — Photo Upload
 - [ ] Mở Upload screen → chọn ảnh → EXIF tự parse
 - [ ] Toggle "Film" → input fields xuất hiện
 - [ ] Nhấn Share → ảnh upload lên Supabase Storage
 - [ ] Kiểm tra row mới trong bảng `photos`
+
+### Manual — Security
 - [ ] Verify security headers trên [securityheaders.com](https://securityheaders.com)
 - [ ] Test RLS: User A không thể DELETE ảnh User B (via Supabase Dashboard)
+
+### Manual — Google Login
+- [ ] Trên trang Login, click "Continue with Google"
+- [ ] Redirect sang Google consent screen → chọn tài khoản
+- [ ] Redirect về app → session tự restore → vào trang chủ
+- [ ] Kiểm tra bảng `profiles` có row mới với thông tin từ Google (tên, avatar)
+- [ ] Sign out → sign in lại bằng Google → không tạo duplicate profile
+- [ ] Test trên Incognito mode (đảm bảo không dựa vào cookie cũ)
 
 ---
 
@@ -404,3 +653,7 @@ Thay `print()` bằng `debugPrint()` (chỉ hiển thị ở debug mode) hoặc 
 > 1. **Storage bucket `photos`** đã được tạo trên Supabase Dashboard chưa? Cần bucket policies cho phép authenticated upload.
 > 2. **Film Stock suggestions**: Có muốn tạo một danh sách preset film phổ biến (Portra 400, Tri-X 400, Superia 400...) để autocomplete không? Hay chỉ cần textbox tự do?
 > 3. **Max file size**: 20MB có phù hợp không? Ảnh film scan thường lớn (30-50MB TIFF). Nếu cần hỗ trợ TIFF, cần tăng limit.
+
+> [!WARNING]
+> 4. **Vercel domain**: Cần biết chính xác URL production của Luxlog trên Vercel (ví dụ: `luxlog.vercel.app`) để cấu hình Google Cloud Console redirect URI và Supabase Site URL. Bạn cho mình URL production nhé?
+> 5. **Facebook Login**: Hiện tại nút Facebook trên Login screen chưa hoạt động (chưa có App ID). Nên xóa hoặc ẩn nút Facebook không?

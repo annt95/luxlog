@@ -46,11 +46,11 @@ void main() {
       expect(state.length, 1);
     });
 
-    test('isFollowing returns correct boolean', () {
-      final notifier = container.read(followStateProvider.notifier);
+    test('contains returns correct boolean', () {
+      final state = container.read(followStateProvider);
 
-      expect(notifier.isFollowing('sarahkwon'), isTrue);
-      expect(notifier.isFollowing('unknown_user'), isFalse);
+      expect(state.contains('sarahkwon'), isTrue);
+      expect(state.contains('unknown_user'), isFalse);
     });
   });
 }

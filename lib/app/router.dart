@@ -12,6 +12,7 @@ import 'package:luxlog/features/portfolio/presentation/public_portfolio_screen.d
 import 'package:luxlog/features/profile/presentation/profile_screen.dart';
 import 'package:luxlog/features/explore/presentation/explore_screen.dart';
 import 'package:luxlog/features/notifications/presentation/notifications_screen.dart';
+import 'package:luxlog/features/profile/presentation/profile_edit_screen.dart';
 import 'package:luxlog/features/tags/presentation/tag_feed_screen.dart';
 import 'package:luxlog/shared/widgets/main_scaffold.dart';
 
@@ -30,7 +31,7 @@ final router = GoRouter(
     }
 
     // Protected routes: require auth for upload, profile edit, notifications
-    const protectedPrefixes = ['/upload', '/notifications'];
+    const protectedPrefixes = ['/upload', '/notifications', '/profile/edit'];
     final isProtected = protectedPrefixes.any((p) => state.matchedLocation.startsWith(p));
     if (session == null && isProtected) {
       return '/login';
@@ -107,6 +108,13 @@ final router = GoRouter(
           pageBuilder: (context, state) => const NoTransitionPage(
             child: ProfileScreen(username: 'me'),
           ),
+          routes: [
+            GoRoute(
+              path: 'edit',
+              name: 'profile-edit',
+              builder: (context, state) => const ProfileEditScreen(),
+            ),
+          ],
         ),
 
         // User Profile (other users)

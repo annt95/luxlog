@@ -23,7 +23,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen>
     with TickerProviderStateMixin {
   late TabController _tabCtrl;
-  static const _tabs = ['Photos', 'Portfolio', 'Collections', 'Gear'];
+  static const _tabs = ['Photos', 'Portfolio'];
 
   @override
   void initState() {
@@ -118,8 +118,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                       username: profileUsername,
                       profileId: profileId,
                     ),
-                    _CollectionsTab(),
-                    _GearTab(),
                   ],
                 ),
               ),
@@ -245,6 +243,12 @@ class _ProfileHeader extends StatelessWidget {
                             onTap: () {},
                           ),
                         ],
+                      )
+                    else
+                      _ProfileButton(
+                        label: 'Edit Profile',
+                        isPrimary: false,
+                        onTap: () => context.push('/profile/edit'),
                       ),
                   ],
                 ),

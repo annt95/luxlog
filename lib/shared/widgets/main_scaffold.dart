@@ -2,8 +2,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:luxlog/features/notifications/providers/notification_provider.dart';
+import 'package:luxlog/features/auth/providers/auth_provider.dart';
 
-class MainScaffold extends StatelessWidget {
+class MainScaffold extends ConsumerWidget {
   final Widget child;
   const MainScaffold({super.key, required this.child});
 
@@ -16,8 +19,12 @@ class MainScaffold extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final idx = _currentIndex(context);
+    final user = ref.watch(currentUserProvider);
+    final unreadCountAsync = user != null ? ref.watch(unreadNotificationCountProvider(user.id)) : const AsyncValue.data(0);
+    final unreadCount = unreadCountAsync.valueOrNull ?? 0;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
@@ -28,7 +35,10 @@ class MainScaffold extends StatelessWidget {
             bottom: 0,
             left: 0,
             right: 0,
-            child: _GlassBottomNav(currentIndex: idx),
+            child: _GlassBottomNav(
+              currentIndex: idx,
+              unreadNotifications: unreadCount,
+            ),
           ),
         ],
       ),
@@ -40,7 +50,11 @@ class MainScaffold extends StatelessWidget {
 
 class _GlassBottomNav extends StatelessWidget {
   final int currentIndex;
-  const _GlassBottomNav({required this.currentIndex});
+  final int unreadNotifications;
+  const _GlassBottomNav({
+    required this.currentIndex,
+    required this.unreadNotifications,
+  });
 
   /// 4 tabs: Discover, Feed, [FAB gap], Portfolio, Profile
   /// Symmetrical: 2 left + gap + 2 right
@@ -109,6 +123,7 @@ class _GlassBottomNav extends StatelessWidget {
                         icon: currentIndex == 3 ? _tabs[3].activeIcon : _tabs[3].icon,
                         label: _tabs[3].label,
                         isActive: currentIndex == 3,
+                        hasBadge: unreadNotifications > 0,
                         onTap: () => context.go(_tabs[3].path),
                       ),
                     ],
@@ -127,12 +142,14 @@ class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool isActive;
+  final bool hasBadge;
   final VoidCallback onTap;
 
   const _NavItem({
     required this.icon,
     required this.label,
     required this.isActive,
+    this.hasBadge = false,
     required this.onTap,
   });
 
@@ -157,12 +174,30 @@ class _NavItem extends StatelessWidget {
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Icon(
-                icon,
-                color: isActive
-                    ? AppColors.primary
-                    : const Color(0xFF757575), // muted gray
-                size: 22,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    icon,
+                    color: isActive
+                        ? AppColors.primary
+                        : const Color(0xFF757575), // muted gray
+                    size: 22,
+                  ),
+                  if (hasBadge)
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             const SizedBox(height: 2),
