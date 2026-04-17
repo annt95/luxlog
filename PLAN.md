@@ -1,6 +1,8 @@
 # Luxlog — Enterprise-Ready Implementation Plan
 
 > Bản kế hoạch toàn diện nhằm nâng cấp Luxlog từ giai đoạn MVP Frontend lên chuẩn **Enterprise-Ready**, bao gồm hệ thống xác thực người dùng đầy đủ, kiến trúc Clean Architecture, và bộ kiểm thử chuyên nghiệp.
+>
+> **Cập nhật lần cuối:** 2026-04-17 — Rà soát lại toàn bộ hiện trạng từ source code thật.
 
 ---
 
@@ -8,181 +10,118 @@
 
 | Module | Trạng thái | Ghi chú |
 |:---|:---:|:---|
-| **Discover Feed** | ✅ UI Done | Đã ẩn Search/Noti icon. Cần kết nối API |
-| **Social Feed** | ✅ UI Done | Tabs For You / Following hoạt động. Mock data |
-| **Photo Detail** | ✅ UI Done | EXIF, tag chips, zoom, share. Mock data |
-| **Upload** | ✅ UI Done | Chip-based tag input & category picker |
-| **Portfolio Editor** | ✅ UI Done | JSON block builder. Chưa lưu DB |
-| **Public Portfolio** | ✅ UI Done | Read-only renderer |
-| **Profile** | ✅ UI Done | Follow/Unfollow optimistic. Mock data |
-| **Explore/Search** | ✅ UI Done | Trending tags + categories section |
-| **Tags & Categories**| ✅ UI + Data | DB Schema, Riverpod Repo, User suggestions |
-| **Notifications** | ✅ UI Done | Tạm ẩn icon. Skeleton UI |
-| **Bottom Nav** | ✅ Fixed | Redesigned: 4 tabs đối xứng + FAB trung tâm |
-| **Auth (Login)** | 🟡 UI Only | Có màn hình login. Chưa kết nối backend |
-| **Auth (Register)** | ❌ Missing | Chưa có màn hình đăng ký |
-| **Auth (Social Login)** | ❌ Missing | Google / Facebook OAuth |
-| **Auth State Management** | ❌ Missing | Session, token, auto-refresh |
-| **Database Layer** | 🟡 Schema Only | SQL script có sẵn, chưa kết nối |
-| **Repository Layer** | ❌ Missing | Không có data fetching thật |
-| **Error Handling** | ❌ Missing | Không có global error boundary |
-| **Unit Tests** | 🟡 Partial | 1 test file (FollowState). Cần mở rộng |
-| **E2E Tests** | 🟡 Partial | 1 integration test scaffold |
+| **Discover Feed** | 🟡 UI + Mock | UI hoàn thiện. Dùng `_mockPhotos`. Cần wire `ref.watch(photoFeedProvider)` |
+| **Social Feed** | 🟡 UI + Mock | Tabs For You / Following hoạt động. `_MockPost` hardcoded |
+| **Photo Detail** | 🟡 UI + Mock | EXIF, tag chips, zoom, share. Mock EXIF data |
+| **Upload** | 🟡 UI + Stub | UI form hoàn thiện. `uploadPhoto()` trong repo là placeholder |
+| **Portfolio Editor** | 🟡 UI Only | JSON block builder. Repo `savePortfolio()` sẵn sàng nhưng chưa kết nối |
+| **Public Portfolio** | 🟡 UI Only | Read-only renderer. Repo `fetchPublicPortfolio()` sẵn sàng |
+| **Profile** | 🟡 UI + Mock | Follow/Unfollow optimistic. Repo sẵn sàng, chưa wire |
+| **Explore/Search** | 🟡 UI + Mock | `_mockTrendingTags`. Categories từ DB nhưng phần khác dùng mock |
+| **Tags & Categories** | ✅ Done | DB Schema + Real Repos + Riverpod Providers + UI. Fully operational |
+| **Notifications** | 🟡 Skeleton | UI skeleton. Không có backend logic |
+| **Bottom Nav** | ✅ Done | Redesigned: 4 tabs đối xứng + FAB trung tâm |
+| **Auth (Login)** | 🟡 UI + TODO | UI glassmorphism hoàn thiện. Social buttons có `onTap: () {}` chưa wire |
+| **Auth (Register)** | 🟡 UI + TODO | UI form hoàn thiện. `// TODO: Call auth repository` (line 42) |
+| **Auth (Social Login)** | 🟡 Repo Done | `signInWithGoogle()` / `signInWithFacebook()` trong repo. Chưa wire vào UI |
+| **Auth State Management** | ✅ Done | `authStateProvider` (Stream) + `currentUserProvider` trong Riverpod |
+| **Auth Repository** | ✅ Done | signUp, signIn, OAuth, signOut, resetPassword — real Supabase |
+| **Auth Remote Datasource** | ✅ Done | Auto-sync user profile sau đăng ký / OAuth |
+| **Database Layer** | ✅ Done | SQL migrations + 7 repositories kết nối Supabase |
+| **Repository Layer** | ✅ Done | Photo, Portfolio, User, Tag, Category, Auth, AuthRemote |
+| **Error Handling** | ✅ Done | Sealed `AppException` hierarchy + `ErrorBoundary` widget |
+| **Environment Config** | ✅ Done | `Env` class đọc `--dart-define`, không hardcode |
+| **Supabase Service** | ✅ Done | `SupabaseService.initialize()` + config check |
+| **Shared Models** | ✅ Done | Freezed: UserModel, PhotoModel, PortfolioModel, TagModel, CategoryModel |
+| **Unit Tests** | 🟡 Partial | ~14 tests: auth repo, exceptions, follow state, login, scaffold, smoke |
+| **E2E Tests** | 🟡 Partial | 1 integration test: Feed → Follow → Comment → Profile |
 | **CI/CD** | ✅ Done | Vercel auto-deploy on push |
 
 ---
 
-## 🔐 Phase A: Authentication System (Ưu tiên #1)
+## 📈 Tổng quan Tiến độ
 
-### A1. Màn hình Đăng ký (Sign Up)
-#### [NEW] `lib/features/auth/presentation/signup_screen.dart`
-- Form đăng ký với các trường: Display Name, Email, Password, Confirm Password
-- Validation: email format, password strength (≥8 ký tự, chứa số + chữ hoa)
-- Nút "Đăng ký bằng Email"
-- Divider "hoặc tiếp tục với"
-- Social login buttons: Google, Facebook (Apple nếu iOS)
-- Link chuyển sang Login Screen
-
-### A2. Nâng cấp Login Screen
-#### [MODIFY] `lib/features/auth/presentation/login_screen.dart`
-- Thêm nút Social Login (Google, Facebook)
-- Thêm link "Quên mật khẩu?" → xử lý Supabase `resetPasswordForEmail()`
-- Thêm link chuyển sang Sign Up Screen
-- Loading state khi đang xác thực
-
-### A3. Auth Repository & Provider
-#### [NEW] `lib/features/auth/data/repositories/auth_repository.dart`
-```dart
-class AuthRepository {
-  final SupabaseClient _client;
-
-  // Email/Password
-  Future<AuthResponse> signUp({email, password, displayName});
-  Future<AuthResponse> signIn({email, password});
-
-  // Social OAuth
-  Future<void> signInWithGoogle();
-  Future<void> signInWithFacebook();
-
-  // Session
-  Future<void> signOut();
-  User? get currentUser;
-  Stream<AuthState> get authStateChanges;
-
-  // Password reset
-  Future<void> resetPassword(String email);
-}
-```
-
-#### [NEW] `lib/features/auth/providers/auth_provider.dart`
-```dart
-// Riverpod providers
-@riverpod AuthRepository authRepository(ref);
-@riverpod Stream<AuthState> authState(ref);  // stream cho auto-login
-@riverpod User? currentUser(ref);
-```
-
-### A4. Auth Guard (Route Protection)
-#### [MODIFY] `lib/app/router.dart`
-- Thêm `redirect` logic: nếu chưa login → redirect `/login`
-- Nếu đã login nhưng đang ở `/login` → redirect `/`
-- Lắng nghe `authStateChanges` để tự động refresh router
-
-### A5. User Profile Auto-Sync
-#### [NEW] `lib/features/auth/data/datasources/auth_remote_datasource.dart`
-- Sau khi đăng ký thành công, tự động tạo row trong bảng `users` (Supabase trigger hoặc manual insert)
-- Đồng bộ `avatar_url`, `display_name` từ OAuth provider
+| Khu vực | Hoàn thành | Ghi chú |
+|:---|:---:|:---|
+| Core Infrastructure | **100%** | Env, Supabase, Errors, Models |
+| Data Layer (Repositories) | **90%** | Chỉ thiếu `uploadPhoto()` file upload |
+| Auth System | **80%** | Backend xong. Cần wire 3–4 dòng code trong UI |
+| Frontend UI | **95%** | Tất cả màn hình polished với animations |
+| UI ↔ Data Wiring | **30%** | Hầu hết screens vẫn dùng mock data |
+| Router Guards | **60%** | Auth redirect logic đã viết nhưng commented out |
+| Testing | **35%** | ~14 tests. Cần mở rộng cho repos + features |
 
 ---
 
-## 🏗 Phase B: Enterprise Architecture Layer
+## 🔧 Phase E: Wiring & Remaining Work (Ưu tiên hiện tại)
 
-### B1. Supabase Client Initialization
-#### [NEW] `lib/core/services/supabase_service.dart`
-```dart
-class SupabaseService {
-  static Future<void> initialize() async {
-    await Supabase.initialize(
-      url: const String.fromEnvironment('SUPABASE_URL'),
-      anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY'),
-    );
-  }
-  static SupabaseClient get client => Supabase.instance.client;
-}
-```
+> Các Phase A–D đã hoàn thành phần lớn. Phase E tập trung **kết nối UI với Data Layer** đã có sẵn.
 
-### B2. Repository Pattern (Clean Architecture)
-#### [NEW] `lib/features/gallery/data/repositories/photo_repository.dart`
-- `fetchFeed({tab, page, limit})` → Supabase query with pagination
-- `fetchPhotoById(id)` → Single photo + EXIF + comments
-- `uploadPhoto({file, title, exif})` → Storage upload + DB insert
-- `likePhoto(id)` / `unlikePhoto(id)`
-- `addComment(photoId, text)`
+### E1. Wire Auth UI → Repository ⚡ (Quan trọng nhất)
+#### [MODIFY] `lib/features/auth/presentation/signup_screen.dart`
+- Thay `// TODO: Call auth repository` bằng `ref.read(authRepositoryProvider).signUp(...)`
+- Xử lý loading state + error state
 
-#### [NEW] `lib/features/portfolio/data/repositories/portfolio_repository.dart`
-- `fetchPortfolio(userId)` → JSON blocks from DB
-- `savePortfolio(userId, blocks)` → Upsert JSON
-- `fetchPublicPortfolio(slug)` → Public read
+#### [MODIFY] `lib/features/auth/presentation/login_screen.dart`
+- Wire social buttons `onTap` → `authRepositoryProvider.signInWithGoogle()` / `signInWithFacebook()`
+- Wire email login → `authRepositoryProvider.signIn()`
 
-#### [NEW] `lib/features/profile/data/repositories/user_repository.dart`
-- `fetchProfile(username)` → User data + stats
-- `updateProfile({bio, avatar, links})`
-- `followUser(targetId)` / `unfollowUser(targetId)`
-- `fetchFollowers(userId)` / `fetchFollowing(userId)`
+### E2. Activate Auth Guards
+#### [MODIFY] `lib/app/router.dart`
+- Uncomment `redirect` logic (đã viết sẵn, chỉ cần bỏ comment)
+- Test: chưa login → redirect `/login`; đã login ở `/login` → redirect `/`
 
-### B3. Global Error Handling
-#### [NEW] `lib/core/errors/app_exception.dart`
-```dart
-sealed class AppException implements Exception {
-  const AppException(this.message);
-  final String message;
-}
-class NetworkException extends AppException { ... }
-class AuthException extends AppException { ... }
-class StorageException extends AppException { ... }
-class ValidationException extends AppException { ... }
-```
+### E3. Wire Feature Screens → Repositories
+#### [MODIFY] Discover, Feed, Explore, Photo Detail, Profile, Portfolio
+- Thay `_mockPhotos`, `_MockPost`, `_mockTrendingTags` bằng `ref.watch(xxxProvider)`
+- Repositories đã sẵn sàng, chỉ cần inject vào UI
 
-#### [NEW] `lib/core/widgets/error_boundary.dart`
-- Widget wrapper bắt lỗi render
-- Hiển thị thông báo lỗi thân thiện (retry button)
+| Screen | Repository sẵn sàng | Cần làm |
+|:---|:---|:---|
+| Discover Feed | `PhotoRepository.fetchFeed()` | Thay mock → provider |
+| Social Feed | `PhotoRepository.fetchFeed(tab:)` | Thay mock → provider |
+| Photo Detail | `PhotoRepository.fetchPhotoById()` | Thay mock EXIF → real data |
+| Profile | `UserRepository.fetchProfile()` | Thay mock → provider |
+| Portfolio Editor | `PortfolioRepository.savePortfolio()` | Kết nối save button → repo |
+| Public Portfolio | `PortfolioRepository.fetchPublicPortfolio()` | Thay mock → provider |
+| Explore | `TagRepository.getTrendingTags()` | Thay mock tags → provider |
 
-### B4. Environment Configuration
-#### [NEW] `lib/core/config/env.dart`
-- Đọc biến môi trường từ `--dart-define`
-- Tách biệt `dev` / `staging` / `production`
-- Không hardcode API keys
+### E4. Implement Photo Upload (File → Storage → DB)
+#### [MODIFY] `lib/features/gallery/data/repositories/photo_repository.dart`
+- Hoàn thiện `uploadPhoto()`: pick file → Supabase Storage upload → insert DB row
+- Kết nối Upload screen → repository
+
+### E5. Notifications Backend
+#### [NEW] Backend logic cho notifications
+- Notification model + repository
+- Trigger notifications cho: like, comment, follow, tag
 
 ---
 
 ## 🧪 Phase C: Testing Suite Mở rộng
 
-### C1. Unit Tests Bổ sung
-#### [NEW] `test/features/auth/providers/auth_provider_test.dart`
-- Test auth state changes (logged in / logged out)
-- Test sign up validation
-- Test social login flow (mocked)
+### Đã có (✅)
+- `test/features/auth/data/auth_repository_test.dart` — 3 tests (signUp success/failure, signIn)
+- `test/core/errors/app_exception_test.dart` — 6 tests (exception hierarchy + messages)
+- `test/features/profile/providers/follow_state_provider_test.dart` — 4 tests
+- `test/features/auth/presentation/login_screen_test.dart` — widget tests
+- `test/shared/widgets/main_scaffold_test.dart` — bottom nav tests
+- `test/widget_test.dart` — smoke test
+- `integration_test/app_flow_test.dart` — E2E scaffold
 
+### Cần bổ sung (🟡)
 #### [NEW] `test/features/gallery/data/photo_repository_test.dart`
 - Test fetch feed pagination
 - Test upload flow (mocked Supabase)
 - Test like/unlike toggle
 
-#### [NEW] `test/core/errors/app_exception_test.dart`
-- Test exception hierarchy
-- Test error message formatting
+#### [NEW] `test/features/portfolio/data/portfolio_repository_test.dart`
+- Test fetch/save portfolio
+- Test public portfolio slug lookup
 
-### C2. Widget Tests
-#### [NEW] `test/features/auth/presentation/login_screen_test.dart`
-- Test form validation UI
-- Test social login buttons render
-- Test navigation to signup
+#### [NEW] `test/features/tags/data/tag_repository_test.dart`
+- Test search, trending, attach tags
 
-#### [NEW] `test/shared/widgets/main_scaffold_test.dart`
-- Test bottom nav tab switching
-- Test FAB renders and taps
-
-### C3. E2E Test Mở rộng
 #### [MODIFY] `integration_test/app_flow_test.dart`
 - Thêm luồng: Login → Feed → Upload → Profile
 - Test full auth flow (với mock Supabase)
@@ -191,63 +130,82 @@ class ValidationException extends AppException { ... }
 
 ## 🎨 Phase D: UI Polish (Enterprise Quality)
 
-### D1. Loading States
-- Skeleton shimmer cho tất cả danh sách (Feed, Explore, Portfolio)
-- Pull-to-refresh trên Feed và Discover
-- Infinite scroll pagination
+### Đã có (✅)
+- [x] Skeleton shimmer loading
+- [x] Pull-to-refresh trên Feed và Discover
+- [x] Glassmorphism design system
+- [x] Responsive layout foundations
 
-### D2. Empty States
-- Thiết kế empty state cho: Feed trống, Portfolio trống, No results
-- Illustration + CTA button
-
-### D3. Accessibility
-- Semantic labels cho tất cả interactive elements
-- Contrast ratio ≥ 4.5:1 (đã đạt theo Stitch design system)
-- Screen reader support
-
-### D4. Responsive Layout
-- Tablet layout (2-column feed)
-- Web layout (3-column with sidebar)
-- Safe area handling trên tất cả thiết bị
+### Cần bổ sung (🟡)
+- [ ] Empty states cho: Feed trống, Portfolio trống, No results (illustration + CTA)
+- [ ] Infinite scroll pagination (kết hợp khi wire repos)
+- [ ] Accessibility: semantic labels cho tất cả interactive elements
+- [ ] Tablet layout (2-column feed) + Web layout (3-column with sidebar)
 
 ---
 
-## 📅 Thứ tự Triển khai
+## 📅 Thứ tự Triển khai (Cập nhật)
 
-| Bước | Công việc | Phụ thuộc |
-|:---:|:---|:---|
-| 1 | **Supabase Init** (B1) — Cần URL + Key từ User | Chờ User |
-| 2 | **Auth System** (A1–A5) — Signup, Login, OAuth, Guards | Bước 1 |
-| 3 | **Repositories** (B2) — Photo, Portfolio, User | Bước 1 |
-| 4 | **Error Handling** (B3) — Global exceptions | Bước 2 |
-| 5 | **Tests** (C1–C3) — Unit + Widget + E2E | Bước 2–3 |
-| 6 | **UI Polish** (D1–D4) — Loading, Empty, A11y | Bước 3 |
+| Bước | Công việc | Trạng thái |
+|:---:|:---|:---:|
+| ~~1~~ | ~~Supabase Init (B1)~~ | ✅ Done |
+| ~~2~~ | ~~Auth Backend (A3, A5)~~ — Repo, Provider, Datasource | ✅ Done |
+| ~~3~~ | ~~Repositories (B2)~~ — Photo, Portfolio, User, Tag, Category | ✅ Done |
+| ~~4~~ | ~~Error Handling (B3)~~ — Global exceptions + boundary | ✅ Done |
+| ~~5~~ | ~~Auth UI (A1, A2)~~ — Signup & Login screens | ✅ Done (UI) |
+| **6** | **Wire Auth UI (E1, E2)** — Kết nối button → repo + activate guards | 🔴 Next |
+| **7** | **Wire Feature Screens (E3)** — Thay mock data → real providers | 🔴 Next |
+| **8** | **Photo Upload (E4)** — File → Storage → DB | 🔴 Next |
+| **9** | **Tests Mở rộng (C)** — Repo tests + widget tests | 🟡 In Progress |
+| **10** | **UI Polish (D)** — Empty states, Infinite scroll, A11y | 🟡 Partial |
+| **11** | **Notifications (E5)** — Backend + real-time | ❌ Not Started |
 
 ---
 
 ## ⚙️ Cấu hình Cần thiết từ User
 
 > [!IMPORTANT]
-> **Để bắt đầu Phase A và B, cần cung cấp:**
-> 1. Supabase Project URL
-> 2. Supabase Anon Key
-> 3. Google OAuth Client ID (từ Google Cloud Console)
-> 4. Facebook App ID (từ Meta Developer Portal)
+> **Để activate Auth (E1, E2), cần cung cấp / xác nhận:**
+> 1. ✅ Supabase Project URL — đã cấu hình qua `--dart-define`
+> 2. ✅ Supabase Anon Key — đã cấu hình qua `--dart-define`
+> 3. 🟡 Google OAuth Client ID (từ Google Cloud Console) — cần cho social login
+> 4. 🟡 Facebook App ID (từ Meta Developer Portal) — cần cho social login
 
 ---
 
-## ✅ Đã Hoàn thành (Commit này)
+## ✅ Đã Hoàn thành
 
+### UI & Design
 - [x] Redesign Bottom Navigation Bar (Stitch MCP "Obsidian Gold")
 - [x] Fix footer lệch — layout đối xứng 2 + FAB + 2
 - [x] Ẩn Search & Notification icons trên Discover
 - [x] Thêm Profile tab vào bottom nav
-- [x] Thêm route `/profile` vào GoRouter
 - [x] App Icon (AI-generated, saved to assets/)
-- [x] Unit Tests (FollowStateProvider — 4/4 pass)
-- [x] E2E Test scaffold (integration_test/)
-- [x] Đổi tên toàn bộ luxlog → luxlog
 - [x] Hoàn thiện Phase D UI Polish (Pull-to-refresh, Skeleton loading)
-- [x] Xây dựng hệ thống Tags, Hashtags và Categories (Sql, Models, Repositories)
-- [x] Thêm UI TagChip, TagInputWidget, Upload / Explore / Discover screens integration
-- [x] Tính năng User đề xuất Category (Pending status / Approved status)
+- [x] Glassmorphism Login & Signup screens
+
+### Architecture & Data Layer
+- [x] Supabase Service initialization + Env config (không hardcode)
+- [x] Sealed AppException hierarchy + ErrorBoundary widget
+- [x] Freezed models: User, Photo, Portfolio, Tag, Category
+- [x] Auth Repository (signUp, signIn, OAuth, signOut, resetPassword)
+- [x] Auth Remote Datasource (profile auto-sync)
+- [x] Auth Riverpod Providers (stream + currentUser)
+- [x] Photo Repository (fetchFeed, fetchById, like, unlike, comment)
+- [x] Portfolio Repository (fetch, save, public slug)
+- [x] User Repository (profile, follow, followers, following)
+- [x] Tag Repository (search, trending, attach, photos by tag)
+- [x] Category Repository (list, suggest, photos by category)
+
+### Tags & Categories (End-to-End)
+- [x] SQL migrations (002_tags_categories.sql)
+- [x] UI TagChip, TagInputWidget
+- [x] Upload / Explore / Discover screens integration
+- [x] User đề xuất Category (Pending / Approved status)
+
+### Testing & CI
+- [x] Unit Tests: auth repo, exceptions, follow state
+- [x] Widget Tests: login screen, main scaffold
+- [x] E2E Test scaffold (integration_test/)
+- [x] GoRouter routes cho tất cả screens
+- [x] Vercel auto-deploy on push
