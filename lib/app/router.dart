@@ -21,15 +21,21 @@ final router = GoRouter(
   initialLocation: '/',
   debugLogDiagnostics: false,
   redirect: (context, state) {
-    final authState = SupabaseService.client.auth.currentSession;
+    final session = SupabaseService.client.auth.currentSession;
     final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/signup';
 
-    if (authState == null && !isLoggingIn) {
-      return '/login';
-    }
-    if (authState != null && isLoggingIn) {
+    // Only redirect: if already logged in and visiting auth pages → go home
+    if (session != null && isLoggingIn) {
       return '/';
     }
+
+    // Protected routes: require auth for upload, profile edit, notifications
+    const protectedPrefixes = ['/upload', '/notifications'];
+    final isProtected = protectedPrefixes.any((p) => state.matchedLocation.startsWith(p));
+    if (session == null && isProtected) {
+      return '/login';
+    }
+
     return null;
   },
   routes: [
