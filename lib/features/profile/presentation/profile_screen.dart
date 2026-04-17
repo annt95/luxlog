@@ -10,6 +10,7 @@ import 'package:luxlog/features/profile/providers/follow_state_provider.dart';
 import 'package:luxlog/features/profile/providers/user_provider.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
 import 'package:luxlog/features/portfolio/providers/portfolio_provider.dart';
+import 'package:luxlog/features/auth/providers/auth_provider.dart';
 
 /// User Profile Screen — portfolio preview + photo grid + bio
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -39,6 +40,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (widget.username == 'me') {
+      final user = ref.watch(currentUserProvider);
+      if (user == null) {
+        return const _GuestProfileView();
+      }
+    }
+
     final profileAsync = widget.username == 'me'
         ? ref.watch(currentUserProfileProvider)
         : ref.watch(userProfileProvider(widget.username));
@@ -48,9 +56,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         backgroundColor: AppColors.background,
         body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
       ),
-      error: (_, __) => const Scaffold(
+      error: (e, _) => Scaffold(
         backgroundColor: AppColors.background,
-        body: Center(child: Text('Failed to load profile')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              e.toString(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70),
+            ),
+          ),
+        ),
       ),
       data: (profile) {
         final profileUsername = profile['username'] as String? ?? widget.username;
@@ -673,6 +690,55 @@ class _GlassIconButton extends StatelessWidget {
               ),
               child: Icon(icon, color: Colors.white, size: 18),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GuestProfileView extends StatelessWidget {
+  const _GuestProfileView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.account_circle_outlined, size: 80, color: AppColors.onSurfaceVariant),
+              const SizedBox(height: 24),
+              Text(
+                'Bạn chưa đăng nhập',
+                style: AppTextStyles.sectionHeader.copyWith(fontSize: 24),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Vui lòng đăng nhập để xem hồ sơ, portfolio và tương tác với các nhiếp ảnh gia khác.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.body.copyWith(color: AppColors.onSurfaceVariant),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: 200,
+                child: ElevatedButton(
+                  onPressed: () => context.pushNamed('login'),
+                  child: const Text('Đăng nhập'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: 200,
+                child: OutlinedButton(
+                  onPressed: () => context.pushNamed('signup'),
+                  child: const Text('Tạo tài khoản'),
+                ),
+              ),
+            ],
           ),
         ),
       ),
