@@ -1,11 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/features/auth/providers/auth_provider.dart';
+import 'package:luxlog/features/notifications/providers/notification_provider.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
+    if (user == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: Text('Activity', style: AppTextStyles.headline),
+          centerTitle: false,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+        ),
+        body: const Center(
+          child: Text('Please sign in to view notifications'),
+        ),
+      );
+    }
+
+    final notificationsAsync = ref.watch(notificationsProvider(user.id));
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -14,19 +35,36 @@ class NotificationsScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await ref
+                  .read(notificationRepositoryProvider)
+                  .markAllAsRead(user.id);
+            },
+            child: const Text('Mark all read'),
+          ),
+        ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: 15,
-        itemBuilder: (context, index) {
-          final isLike = index % 3 == 0;
-          final isFollow = index % 3 == 1;
-          final isComment = index % 3 == 2;
-          
-          return _NotificationTile(
-             isLike: isLike,
-             isFollow: isFollow,
-             isComment: isComment,
+      body: notificationsAsync.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+        error: (_, __) => const Center(
+          child: Text('Failed to load notifications'),
+        ),
+        data: (items) {
+          if (items.isEmpty) {
+            return const Center(
+              child: Text('No activity yet'),
+            );
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              return _NotificationTile(notification: items[index]);
+            },
           );
         },
       ),
@@ -35,34 +73,39 @@ class NotificationsScreen extends StatelessWidget {
 }
 
 class _NotificationTile extends StatelessWidget {
-  final bool isLike;
-  final bool isFollow;
-  final bool isComment;
+  final Map<String, dynamic> notification;
 
   const _NotificationTile({
-    required this.isLike,
-    required this.isFollow,
-    required this.isComment,
+    required this.notification,
   });
 
   @override
   Widget build(BuildContext context) {
     IconData icon;
-    Color iconColor;
     String actionText;
-    
-    if (isLike) {
+    final type = notification['type'] as String? ?? 'like';
+    final actor = notification['actor'] as Map<String, dynamic>?;
+    final photo = notification['photo'] as Map<String, dynamic>?;
+    final actorName = actor?['username'] as String? ?? 'Someone';
+    final avatarUrl = actor?['avatar_url'] as String?;
+    final photoUrl = photo?['image_url'] as String?;
+    final createdAt = DateTime.tryParse(
+      notification['created_at'] as String? ?? '',
+    );
+    final hasUnread = notification['read_at'] == null;
+
+    if (type == 'like') {
       icon = Icons.favorite;
-      iconColor = Colors.redAccent;
       actionText = 'liked your photo';
-    } else if (isFollow) {
+    } else if (type == 'follow') {
       icon = Icons.person_add;
-      iconColor = AppColors.primary;
       actionText = 'started following you';
-    } else {
+    } else if (type == 'comment') {
       icon = Icons.mode_comment;
-      iconColor = Colors.white70;
-      actionText = 'commented: "Incredible tones here!"';
+      actionText = 'commented on your photo';
+    } else {
+      icon = Icons.local_offer_outlined;
+      actionText = 'tagged your photo';
     }
 
     return Padding(
@@ -79,7 +122,12 @@ class _NotificationTile extends StatelessWidget {
             CircleAvatar(
               radius: 20,
               backgroundColor: AppColors.surfaceContainerHigh,
-              backgroundImage: const NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'),
+              backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+              child: avatarUrl == null
+                  ? Text(
+                      actorName.isNotEmpty ? actorName[0].toUpperCase() : 'U',
+                    )
+                  : null,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -91,7 +139,7 @@ class _NotificationTile extends StatelessWidget {
                       style: AppTextStyles.body,
                       children: [
                         TextSpan(
-                          text: 'sarah_lens ',
+                          text: '$actorName ',
                           style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                         ),
                         TextSpan(text: actionText),
@@ -99,32 +147,21 @@ class _NotificationTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text('2 hours ago', style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondary)),
+                  Text(_relativeTime(createdAt), style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondary)),
                 ],
               ),
             ),
-            if (!isFollow) ...[
+            Icon(icon, color: hasUnread ? AppColors.primary : AppColors.onSurfaceVariant),
+            if (photoUrl != null) ...[
               const SizedBox(width: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(2.0),
                 child: Image.network(
-                  'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&q=80&w=100',
+                  photoUrl,
                   width: 44,
                   height: 44,
                   fit: BoxFit.cover,
                 ),
-              ),
-            ],
-            if (isFollow) ...[
-              const SizedBox(width: 12),
-              OutlinedButton(
-                onPressed: () {},
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  side: BorderSide(color: AppColors.outline),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4.0)),
-                ),
-                child: Text('Follow', style: AppTextStyles.bodySmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ],
           ]
@@ -132,4 +169,13 @@ class _NotificationTile extends StatelessWidget {
       ),
     );
   }
+}
+
+String _relativeTime(DateTime? dateTime) {
+  if (dateTime == null) return 'Just now';
+  final diff = DateTime.now().difference(dateTime);
+  if (diff.inMinutes < 1) return 'Just now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+  return '${diff.inDays}d ago';
 }
