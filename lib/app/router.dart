@@ -24,15 +24,12 @@ final router = GoRouter(
     final authState = SupabaseService.client.auth.currentSession;
     final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/signup';
 
-    // Uncomment this when fully wired:
-    /*
     if (authState == null && !isLoggingIn) {
       return '/login';
     }
     if (authState != null && isLoggingIn) {
       return '/';
     }
-    */
     return null;
   },
   routes: [
