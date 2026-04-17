@@ -8,8 +8,12 @@ import 'package:luxlog/core/services/supabase_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  await SupabaseService.initialize();
+  Object? initError;
+  try {
+    await SupabaseService.initialize();
+  } catch (error) {
+    initError = error;
+  }
 
   // Immersive dark UI — extend content behind status bar
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -23,6 +27,7 @@ void main() async {
     ProviderScope(
       child: LuxlogApp(
         isBackendReady: SupabaseService.isInitialized,
+        initError: initError,
       ),
     ),
   );
@@ -30,10 +35,12 @@ void main() async {
 
 class LuxlogApp extends StatelessWidget {
   final bool isBackendReady;
+  final Object? initError;
 
   const LuxlogApp({
     super.key,
     required this.isBackendReady,
+    this.initError,
   });
 
   @override
@@ -43,7 +50,7 @@ class LuxlogApp extends StatelessWidget {
         title: 'Luxlog',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
-        home: const _MissingConfigScreen(),
+        home: _MissingConfigScreen(error: initError),
       );
     }
 
@@ -57,19 +64,33 @@ class LuxlogApp extends StatelessWidget {
 }
 
 class _MissingConfigScreen extends StatelessWidget {
-  const _MissingConfigScreen();
+  final Object? error;
+  const _MissingConfigScreen({this.error});
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: Color(0xFF0E0E0E),
       body: Center(
         child: Padding(
           padding: EdgeInsets.all(24),
-          child: Text(
-            'Supabase is not configured.\n'
-            'Set SUPABASE_URL and SUPABASE_ANON_KEY to continue.',
-            textAlign: TextAlign.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Supabase is not configured.\n'
+                'Set SUPABASE_URL and SUPABASE_ANON_KEY to continue.',
+                textAlign: TextAlign.center,
+              ),
+              if (error != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  error.toString(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ],
+            ],
           ),
         ),
       ),
