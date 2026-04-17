@@ -34,7 +34,7 @@ class UserRepository {
   Future<Map<String, dynamic>> fetchCurrentProfile() async {
     try {
       final userId = _client.auth.currentUser?.id;
-      if (userId == null) throw const AuthException();
+      if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
       final response = await _client
           .from('profiles')
           .select('*, followers:follows!following_id(count), following:follows!follower_id(count)')
@@ -84,7 +84,7 @@ class UserRepository {
   Future<void> updateProfile({String? bio, String? avatarUrl, Map<String, dynamic>? links}) async {
     try {
       final userId = _client.auth.currentUser?.id;
-      if (userId == null) throw const AuthException();
+      if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
       
       final updates = <String, dynamic>{};
       if (bio != null) updates['bio'] = bio;
@@ -112,7 +112,7 @@ class UserRepository {
   Future<void> followUser(String targetId) async {
     try {
       final userId = _client.auth.currentUser?.id;
-      if (userId == null) throw const AuthException();
+      if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
       await _client.from('follows').insert({
         'follower_id': userId,
         'following_id': targetId,
@@ -137,7 +137,7 @@ class UserRepository {
   Future<void> unfollowUser(String targetId) async {
     try {
       final userId = _client.auth.currentUser?.id;
-      if (userId == null) throw const AuthException();
+      if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
       await _client.from('follows').delete().match({
         'follower_id': userId,
         'following_id': targetId,

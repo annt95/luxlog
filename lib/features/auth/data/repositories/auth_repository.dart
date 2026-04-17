@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 import 'package:supabase_flutter/supabase_flutter.dart' as supa show AuthException;
 import '../../../../core/errors/app_exception.dart';
@@ -12,7 +13,8 @@ class AuthRepository {
     AuthRemoteDataSource? remoteDataSource,
   }) : _remoteDataSource = remoteDataSource ?? AuthRemoteDataSource(_client);
 
-  // Email/Password
+  // ── Email/Password ──────────────────────────────────────────────────────────
+
   Future<AuthResponse> signUp({
     required String email,
     required String password,
@@ -52,59 +54,59 @@ class AuthRepository {
     }
   }
 
-  // Social OAuth
+  // ── Social OAuth ────────────────────────────────────────────────────────────
+
+  /// Signs in with Google using OAuth redirect flow.
+  ///
+  /// On Web: triggers a full-page redirect to Google → back to [_getRedirectUrl()].
+  /// The Supabase JS SDK auto-parses tokens from the URL hash on return.
+  /// Profile sync is handled by the auth state listener in [auth_provider.dart].
   Future<void> signInWithGoogle() async {
     try {
-      await _client.auth.signInWithOAuth(OAuthProvider.google);
-      final user = _client.auth.currentUser;
-      if (user != null) {
-        await _remoteDataSource.syncUserProfile(user);
-      }
+      await _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: _getRedirectUrl(),
+      );
     } on supa.AuthException catch (e, stackTrace) {
       throw AuthException(e.message, cause: e, stackTrace: stackTrace);
     } catch (e, stackTrace) {
       throw AuthException(
-        'Google sign in failed',
+        'Đăng nhập Google không thành công. Vui lòng thử lại.',
         cause: e,
         stackTrace: stackTrace,
       );
     }
   }
 
-  Future<void> signInWithFacebook() async {
-    try {
-      await _client.auth.signInWithOAuth(OAuthProvider.facebook);
-      final user = _client.auth.currentUser;
-      if (user != null) {
-        await _remoteDataSource.syncUserProfile(user);
-      }
-    } on supa.AuthException catch (e, stackTrace) {
-      throw AuthException(e.message, cause: e, stackTrace: stackTrace);
-    } catch (e, stackTrace) {
-      throw AuthException(
-        'Facebook sign in failed',
-        cause: e,
-        stackTrace: stackTrace,
-      );
+  /// Returns the OAuth redirect URL for the current platform.
+  ///
+  /// On Web: uses [Uri.base.origin] so Supabase redirects back to the app.
+  /// On native mobile: returns null (deep-link will be configured separately).
+  String? _getRedirectUrl() {
+    if (kIsWeb) {
+      return Uri.base.origin;
     }
+    return null;
   }
 
-  // Session
+  // ── Session ─────────────────────────────────────────────────────────────────
+
   Future<void> signOut() async {
     try {
       await _client.auth.signOut();
     } on supa.AuthException catch (e, stackTrace) {
       throw AuthException(e.message, cause: e, stackTrace: stackTrace);
     } catch (e, stackTrace) {
-      throw AuthException('Sign out failed', cause: e, stackTrace: stackTrace);
+      throw AuthException('Đăng xuất không thành công', cause: e, stackTrace: stackTrace);
     }
   }
 
   User? get currentUser => _client.auth.currentUser;
-  
+
   Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
 
-  // Password reset
+  // ── Password reset ──────────────────────────────────────────────────────────
+
   Future<void> resetPassword(String email) async {
     try {
       await _client.auth.resetPasswordForEmail(email);

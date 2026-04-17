@@ -227,7 +227,7 @@ class PhotoRepository {
   Future<void> likePhoto(String photoId) async {
     try {
       final userId = _client.auth.currentUser?.id;
-      if (userId == null) throw const AuthException();
+      if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
       await _client.from('likes').insert({'photo_id': photoId, 'user_id': userId});
     } on PostgrestException catch (e, stackTrace) {
       throw NetworkException(
@@ -243,7 +243,7 @@ class PhotoRepository {
   Future<void> unlikePhoto(String photoId) async {
     try {
       final userId = _client.auth.currentUser?.id;
-      if (userId == null) throw const AuthException();
+      if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
       await _client.from('likes').delete().match({'photo_id': photoId, 'user_id': userId});
     } on PostgrestException catch (e, stackTrace) {
       throw NetworkException(
@@ -263,7 +263,7 @@ class PhotoRepository {
   Future<void> addComment(String photoId, String text) async {
     try {
       final userId = _client.auth.currentUser?.id;
-      if (userId == null) throw const AuthException();
+      if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
       await _client.from('comments').insert({
         'photo_id': photoId,
         'user_id': userId,

@@ -20,6 +20,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passCtrl = TextEditingController();
   bool _obscurePass = true;
   bool _loading = false;
+  bool _googleLoading = false;
 
   @override
   void dispose() {
@@ -49,29 +50,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _signInWithGoogle() async {
+    setState(() => _googleLoading = true);
     try {
+      // On web this triggers a full-page redirect — the loading state
+      // may not visually resolve, but it prevents double-taps.
       await ref.read(authRepositoryProvider).signInWithGoogle();
     } catch (e) {
       if (mounted) {
-        final message = e is AppException ? e.message : 'Đăng nhập Google không thành công. Vui lòng thử lại.';
+        final message = e is AppException
+            ? e.message
+            : 'Đăng nhập Google không thành công. Vui lòng thử lại.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message)),
         );
       }
+    } finally {
+      if (mounted) setState(() => _googleLoading = false);
     }
   }
 
-  Future<void> _signInWithFacebook() async {
-    try {
-      await ref.read(authRepositoryProvider).signInWithFacebook();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
-      }
-    }
-  }
 
   Future<void> _forgotPassword() async {
     final email = _emailCtrl.text.trim();
@@ -163,14 +160,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 // Social login buttons
                                 _SocialButton(
                                   icon: Icons.g_mobiledata_rounded,
-                                  label: 'Continue with Google',
-                                  onTap: _signInWithGoogle,
-                                ),
-                                const SizedBox(height: 10),
-                                _SocialButton(
-                                  icon: Icons.facebook,
-                                  label: 'Continue with Facebook',
-                                  onTap: _signInWithFacebook,
+                                  label: _googleLoading
+                                      ? 'Redirecting...'
+                                      : 'Continue with Google',
+                                  onTap: _googleLoading ? () {} : _signInWithGoogle,
+                                  loading: _googleLoading,
                                 ),
 
                                 Padding(
@@ -301,19 +295,32 @@ class _SocialButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool loading;
 
-  const _SocialButton({required this.icon, required this.label, required this.onTap});
+  const _SocialButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.loading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 44,
       child: OutlinedButton(
-        onPressed: onTap,
+        onPressed: loading ? null : onTap,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 20, color: AppColors.onSurface),
+            if (loading)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+              )
+            else
+              Icon(icon, size: 20, color: AppColors.onSurface),
             const SizedBox(width: 10),
             Text(label, style: AppTextStyles.label),
           ],

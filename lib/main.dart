@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/app/router.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/core/services/supabase_service.dart';
-
+import 'package:luxlog/features/auth/providers/auth_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,7 +33,7 @@ void main() async {
   );
 }
 
-class LuxlogApp extends StatelessWidget {
+class LuxlogApp extends ConsumerWidget {
   final bool isBackendReady;
   final Object? initError;
 
@@ -44,7 +44,11 @@ class LuxlogApp extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Activate the auth profile sync listener globally.
+    // This ensures Google OAuth return is handled even after app restart.
+    if (isBackendReady) ref.watch(authProfileSyncProvider);
+
     if (!isBackendReady) {
       return MaterialApp(
         title: 'Luxlog',
