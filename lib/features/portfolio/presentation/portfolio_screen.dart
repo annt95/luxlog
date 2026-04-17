@@ -2,11 +2,14 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/features/portfolio/providers/portfolio_provider.dart';
+import 'package:luxlog/features/auth/providers/auth_provider.dart';
 
 /// Module 3: Portfolio — dashboard listing all user projects
-class PortfolioScreen extends StatelessWidget {
+class PortfolioScreen extends ConsumerWidget {
   const PortfolioScreen({super.key});
 
   static const _projects = [
@@ -21,7 +24,13 @@ class PortfolioScreen extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider);
+    // Load portfolio blocks if user is authenticated
+    final portfolioAsync = currentUser != null
+        ? ref.watch(portfolioBlocksProvider(currentUser.id))
+        : null;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(

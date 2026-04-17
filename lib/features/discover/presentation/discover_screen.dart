@@ -1,47 +1,33 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/shared/widgets/photo_card.dart';
+import 'package:luxlog/features/gallery/providers/photo_provider.dart';
+import 'package:luxlog/features/tags/providers/category_provider.dart';
 
 /// Module 4: Discover Feed — based on Stitch "Luxlog Feed - Desktop/Mobile"
-class DiscoverScreen extends StatefulWidget {
+class DiscoverScreen extends ConsumerStatefulWidget {
   const DiscoverScreen({super.key});
 
   @override
-  State<DiscoverScreen> createState() => _DiscoverScreenState();
+  ConsumerState<DiscoverScreen> createState() => _DiscoverScreenState();
 }
 
-class _DiscoverScreenState extends State<DiscoverScreen> {
+class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   final ScrollController _scrollController = ScrollController();
   int _selectedFilter = 0;
 
-  static const _filters = [
-    'All',
-    'Trending',
-    // Categories from DB (mock for now)
-    'Portrait',
-    'Landscape',
-    'Street',
-    'Architecture',
-    'Film',
-    'Wildlife',
-    'Macro',
-    'Night',
-  ];
+  List<String> _filters = ['All', 'Trending'];
 
-  // Mock data — replace with Supabase query
-  static final _mockPhotos = List.generate(24, (i) => (
-    id: 'photo_$i',
-    url: 'https://picsum.photos/seed/$i/800/${600 + (i % 3) * 100}',
-    photographer: 'Photographer ${i + 1}',
-    avatar: null as String?,
-    title: i % 3 == 0 ? 'Into the Light #$i' : null,
-    likes: 120 + i * 17,
-    aspect: i % 5 == 0 ? 3 / 4.0 : (i % 3 == 0 ? 4 / 3.0 : 1.0),
-  ));
+  @override
+  void initState() {
+    super.initState();
+    // Categories will be loaded via provider
+  }
 
   @override
   void dispose() {
@@ -51,14 +37,28 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Load categories for filter chips
+    final categoriesAsync = ref.watch(categoriesProvider);
+    categoriesAsync.whenData((cats) {
+      final catNames = cats.map((c) => c['name'] as String).toList();
+      if (_filters.length <= 2) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _filters = ['All', 'Trending', ...catNames]);
+        });
+      }
+    });
+
+    // Load photo feed
+    final feedAsync = ref.watch(photoFeedProvider(page: 0, limit: 24));
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: RefreshIndicator(
         color: AppColors.primary,
         backgroundColor: AppColors.surfaceContainerHigh,
         onRefresh: () async {
-          await Future.delayed(const Duration(seconds: 1));
-          setState(() {});
+          ref.invalidate(photoFeedProvider);
+          ref.invalidate(categoriesProvider);
         },
         child: CustomScrollView(
           controller: _scrollController,
@@ -111,25 +111,34 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           ),
 
           // ── Masonry Grid ──────────────────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
-            sliver: SliverMasonryGrid.count(
-              crossAxisCount: _crossAxisCount(context),
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childCount: _mockPhotos.length,
-              itemBuilder: (context, i) {
-                final p = _mockPhotos[i];
-                return PhotoCard(
-                  photoId: p.id,
-                  imageUrl: p.url,
-                  photographerName: p.photographer,
-                  photographerAvatar: p.avatar,
-                  title: p.title,
-                  likes: p.likes,
-                  aspectRatio: p.aspect,
-                );
-              },
+          feedAsync.when(
+            data: (photos) => SliverPadding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
+              sliver: SliverMasonryGrid.count(
+                crossAxisCount: _crossAxisCount(context),
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childCount: photos.length,
+                itemBuilder: (context, i) {
+                  final p = photos[i];
+                  final profile = p['profiles'] as Map<String, dynamic>?;
+                  return PhotoCard(
+                    photoId: p['id'] as String,
+                    imageUrl: p['image_url'] as String? ?? 'https://picsum.photos/seed/$i/800/600',
+                    photographerName: profile?['username'] as String? ?? 'Unknown',
+                    photographerAvatar: profile?['avatar_url'] as String?,
+                    title: p['title'] as String?,
+                    likes: p['likes_count'] as int? ?? 0,
+                    aspectRatio: (p['aspect_ratio'] as num?)?.toDouble() ?? 1.0,
+                  );
+                },
+              ),
+            ),
+            loading: () => const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+            ),
+            error: (e, _) => SliverFillRemaining(
+              child: Center(child: Text('Error loading feed', style: TextStyle(color: AppColors.onSurfaceVariant))),
             ),
           ),
         ],

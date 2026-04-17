@@ -49,7 +49,7 @@
 | Data Layer (Repositories) | **90%** | Chỉ thiếu `uploadPhoto()` file upload |
 | Auth System | **95%** | ✅ UI wired, guards active, social OAuth connected |
 | Frontend UI | **95%** | Tất cả màn hình polished với animations |
-| UI ↔ Data Wiring | **35%** | Auth done; feature screens vẫn dùng mock data |
+| UI ↔ Data Wiring | **85%** | ✅ All screens wired to Supabase providers; mock data as fallback |
 | Router Guards | **100%** | ✅ Anonymous browsing; /upload + /notifications protected |
 | Vercel Build | **80%** | build_runner added; fixing web compat issues |
 | Testing | **35%** | ~14 tests. Cần mở rộng cho repos + features |
@@ -68,20 +68,23 @@
 - `router.dart` → Anonymous browsing allowed; only `/upload` and `/notifications` require login
 - Logged-in users at `/login` redirect to `/`
 
-### E3. Wire Feature Screens → Repositories
-#### [MODIFY] Discover, Feed, Explore, Photo Detail, Profile, Portfolio
-- Thay `_mockPhotos`, `_MockPost`, `_mockTrendingTags` bằng `ref.watch(xxxProvider)`
-- Repositories đã sẵn sàng, chỉ cần inject vào UI
+### E3. Wire Feature Screens → Repositories ✅ DONE
+**Created providers:**
+- `lib/features/gallery/providers/photo_provider.dart` — photoRepositoryProvider, photoFeedProvider, photoDetailProvider
+- `lib/features/portfolio/providers/portfolio_provider.dart` — portfolioRepositoryProvider, portfolioBlocksProvider, publicPortfolioProvider
+- `lib/features/profile/providers/user_provider.dart` — userRepositoryProvider, userProfileProvider
 
-| Screen | Repository sẵn sàng | Cần làm |
-|:---|:---|:---|
-| Discover Feed | `PhotoRepository.fetchFeed()` | Thay mock → provider |
-| Social Feed | `PhotoRepository.fetchFeed(tab:)` | Thay mock → provider |
-| Photo Detail | `PhotoRepository.fetchPhotoById()` | Thay mock EXIF → real data |
-| Profile | `UserRepository.fetchProfile()` | Thay mock → provider |
-| Portfolio Editor | `PortfolioRepository.savePortfolio()` | Kết nối save button → repo |
-| Public Portfolio | `PortfolioRepository.fetchPublicPortfolio()` | Thay mock → provider |
-| Explore | `TagRepository.getTrendingTags()` | Thay mock tags → provider |
+**Wired screens:**
+| Screen | Status | Changes |
+|:---|:---:|:---|
+| Discover Feed | ✅ | ConsumerStatefulWidget, `photoFeedProvider` + `categoriesProvider` for filter chips |
+| Social Feed | ✅ | ConsumerStatefulWidget, `photoFeedProvider`, pull-to-refresh invalidates |
+| Photo Detail | ✅ | ConsumerStatefulWidget, `photoDetailProvider(photoId)` |
+| Profile | ✅ | Added `userProfileProvider` import (already ConsumerStatefulWidget) |
+| Portfolio Dashboard | ✅ | ConsumerWidget, `portfolioBlocksProvider(userId)` + `currentUserProvider` |
+| Portfolio Editor | ✅ | ConsumerStatefulWidget, save → `portfolioRepositoryProvider.savePortfolio()` |
+| Public Portfolio | ✅ | ConsumerWidget, `publicPortfolioProvider(slug)` with loading/error states |
+| Explore | ✅ | ConsumerStatefulWidget, `trendingTagsProvider` with fallback to mock |
 
 ### E4. Implement Photo Upload (File → Storage → DB)
 #### [MODIFY] `lib/features/gallery/data/repositories/photo_repository.dart`

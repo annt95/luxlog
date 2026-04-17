@@ -1,59 +1,51 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:luxlog/features/portfolio/presentation/portfolio_editor_screen.dart';
+import 'package:luxlog/features/portfolio/providers/portfolio_provider.dart';
 
-class PublicPortfolioScreen extends StatelessWidget {
+class PublicPortfolioScreen extends ConsumerWidget {
   final String slug;
   const PublicPortfolioScreen({super.key, required this.slug});
 
-  // Mock JSON Data for the render
-  static const _mockBlocksJson = '''
-  [
-    {"type": "hero", "data": {"image_url": "https://picsum.photos/seed/port1/1200/600", "title": "Tokyo After Rain", "subtitle": "Documentary Series, 2024"}},
-    {"type": "text", "data": {"content": "This project captures the neon reflections and quiet moments after a heavy downpour in Shinjuku and Shibuya. Shot exclusively on Sony A7IV with 35mm GM."}},
-    {"type": "masonry", "data": {"images": [
-      {"url": "https://picsum.photos/seed/m1/400/600", "aspect": 0.66},
-      {"url": "https://picsum.photos/seed/m2/600/400", "aspect": 1.5},
-      {"url": "https://picsum.photos/seed/m3/500/500", "aspect": 1.0},
-      {"url": "https://picsum.photos/seed/m4/400/800", "aspect": 0.5}
-    ]}}
-  ]
-  ''';
-
   @override
-  Widget build(BuildContext context) {
-    final blocks = jsonDecode(_mockBlocksJson) as List;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final portfolioAsync = ref.watch(publicPortfolioProvider(slug));
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            backgroundColor: AppColors.background,
-            elevation: 0,
-            floating: true,
-            leading: IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () => Navigator.of(context).maybePop(),
+      body: portfolioAsync.when(
+        data: (blocks) => CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              backgroundColor: AppColors.background,
+              elevation: 0,
+              floating: true,
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+              actions: [
+                IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
+              ],
             ),
-            actions: [
-              IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
-            ],
-          ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final blockInfo = blocks[index];
-                return _renderBlock(blockInfo);
-              },
-              childCount: blocks.length,
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final blockInfo = blocks[index];
+                  return _renderBlock(blockInfo);
+                },
+                childCount: blocks.length,
+              ),
             ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 96)),
-        ],
+            const SliverToBoxAdapter(child: SizedBox(height: 96)),
+          ],
+        ),
+        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        error: (e, _) => Center(child: Text('Portfolio not found', style: TextStyle(color: AppColors.onSurfaceVariant))),
       ),
     );
   }

@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/features/portfolio/providers/portfolio_provider.dart';
+import 'package:luxlog/features/auth/providers/auth_provider.dart';
 
 /// Module 3: Portfolio Editor — drag-reorder project blocks
-class PortfolioEditorScreen extends StatefulWidget {
+class PortfolioEditorScreen extends ConsumerStatefulWidget {
   final String projectId;
   const PortfolioEditorScreen({super.key, required this.projectId});
 
   @override
-  State<PortfolioEditorScreen> createState() => _PortfolioEditorScreenState();
+  ConsumerState<PortfolioEditorScreen> createState() => _PortfolioEditorScreenState();
 }
 
-class _PortfolioEditorScreenState extends State<PortfolioEditorScreen> {
+class _PortfolioEditorScreenState extends ConsumerState<PortfolioEditorScreen> {
   final _titleCtrl = TextEditingController(text: 'Tokyo After Rain');
   final _descCtrl = TextEditingController(
       text: 'A documentary series capturing the streets of Tokyo on rainy nights.');
@@ -119,7 +122,17 @@ class _PortfolioEditorScreenState extends State<PortfolioEditorScreen> {
     );
   }
 
-  void _save() => setState(() => _unsaved = false);
+  void _save() {
+    final currentUser = ref.read(currentUserProvider);
+    if (currentUser != null) {
+      final blocksData = _blocks.map((b) => {
+        'type': b.type.name,
+        'content': b.content,
+      }).toList();
+      ref.read(portfolioRepositoryProvider).savePortfolio(currentUser.id, blocksData);
+    }
+    setState(() => _unsaved = false);
+  }
 
   void _preview() {
     // TODO: navigate to public portfolio view

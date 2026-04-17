@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/features/profile/providers/follow_state_provider.dart';
+import 'package:luxlog/features/profile/providers/user_provider.dart';
 
 /// User Profile Screen — portfolio preview + photo grid + bio
 class ProfileScreen extends ConsumerStatefulWidget {

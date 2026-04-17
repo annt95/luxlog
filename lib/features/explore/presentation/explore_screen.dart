@@ -1,21 +1,24 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/shared/widgets/tag_chip.dart';
+import 'package:luxlog/features/tags/providers/tag_provider.dart';
+import 'package:luxlog/features/tags/providers/category_provider.dart';
 
 /// Explore / Search screen
-class ExploreScreen extends StatefulWidget {
+class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
 
   @override
-  State<ExploreScreen> createState() => _ExploreScreenState();
+  ConsumerState<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-class _ExploreScreenState extends State<ExploreScreen>
+class _ExploreScreenState extends ConsumerState<ExploreScreen>
     with TickerProviderStateMixin {
   final _searchCtrl = TextEditingController();
   late final TabController _tabCtrl;
@@ -37,8 +40,8 @@ class _ExploreScreenState extends State<ExploreScreen>
     ('Aerial', Icons.flight_outlined, 'https://picsum.photos/seed/g10/300/300'),
   ];
 
-  // Mock trending tags (will be replaced with TagRepository.getTrendingTags())
-  static const _trendingTags = [
+  // Mock trending tags fallback
+  static const _fallbackTags = [
     'goldenhour', 'streetphotography', 'portrait', 'blackandwhite',
     'filmphotography', 'fujifilm', 'sony', 'nightscape', 'macro',
     'landscapephotography', 'bokeh', 'leica', 'cinematic',
@@ -119,14 +122,39 @@ class _ExploreScreenState extends State<ExploreScreen>
             SliverToBoxAdapter(
               child: SizedBox(
                 height: 36,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: _trendingTags.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 6),
-                  itemBuilder: (context, i) => TagChip(
-                    tagName: _trendingTags[i],
-                    onTap: () => context.push('/tag/${_trendingTags[i]}'),
+                child: ref.watch(trendingTagsProvider).when(
+                  data: (tags) {
+                    final tagNames = tags.map((t) => t['name'] as String).toList();
+                    return ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount: tagNames.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 6),
+                      itemBuilder: (context, i) => TagChip(
+                        tagName: tagNames[i],
+                        onTap: () => context.push('/tag/${tagNames[i]}'),
+                      ),
+                    );
+                  },
+                  loading: () => ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    itemCount: _fallbackTags.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 6),
+                    itemBuilder: (context, i) => TagChip(
+                      tagName: _fallbackTags[i],
+                      onTap: () => context.push('/tag/${_fallbackTags[i]}'),
+                    ),
+                  ),
+                  error: (_, __) => ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    itemCount: _fallbackTags.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 6),
+                    itemBuilder: (context, i) => TagChip(
+                      tagName: _fallbackTags[i],
+                      onTap: () => context.push('/tag/${_fallbackTags[i]}'),
+                    ),
                   ),
                 ),
               ),

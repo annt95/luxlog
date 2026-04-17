@@ -1,23 +1,24 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/shared/widgets/exif_badge.dart';
 import 'package:luxlog/shared/widgets/tag_chip.dart';
+import 'package:luxlog/features/gallery/providers/photo_provider.dart';
 
-/// Module 1: Photo Detail — based on Stitch "Photo Detail - Desktop/Mobile"
-/// Full EXIF display, photographer info, immersive dark background
-class PhotoDetailScreen extends StatefulWidget {
+/// Module 1: Photo Detail
+class PhotoDetailScreen extends ConsumerStatefulWidget {
   final String photoId;
   const PhotoDetailScreen({super.key, required this.photoId});
 
   @override
-  State<PhotoDetailScreen> createState() => _PhotoDetailScreenState();
+  ConsumerState<PhotoDetailScreen> createState() => _PhotoDetailScreenState();
 }
 
-class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
+class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
   bool _liked = false;
   bool _saved = false;
   int _likes = 2471;

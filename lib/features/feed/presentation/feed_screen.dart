@@ -2,19 +2,21 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/features/gallery/presentation/widgets/comment_bottom_sheet.dart';
 import 'package:luxlog/shared/widgets/skeleton_widgets.dart';
+import 'package:luxlog/features/gallery/providers/photo_provider.dart';
 
 /// Module 2: Social Feed — Instagram-like following feed
-class FeedScreen extends StatefulWidget {
+class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({super.key});
 
   @override
-  State<FeedScreen> createState() => _FeedScreenState();
+  ConsumerState<FeedScreen> createState() => _FeedScreenState();
 }
 
-class _FeedScreenState extends State<FeedScreen> {
+class _FeedScreenState extends ConsumerState<FeedScreen> {
   final _scrollController = ScrollController();
 
   // Mock posts
@@ -60,8 +62,7 @@ class _FeedScreenState extends State<FeedScreen> {
         color: AppColors.primary,
         backgroundColor: AppColors.surfaceContainerHigh,
         onRefresh: () async {
-          await Future.delayed(const Duration(seconds: 1));
-          setState(() {});
+          ref.invalidate(photoFeedProvider);
         },
         child: CustomScrollView(
           controller: _scrollController,
