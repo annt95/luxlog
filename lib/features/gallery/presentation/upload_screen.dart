@@ -279,56 +279,86 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         child: _currentStep == 0
             ? _PickStep(onPick: _pickImage)
             : _currentStep == 1
-                ? _DetailsStep(
-                    imageBytes: _selectedImageBytes!,
-                    exif: _parsedExif,
-                    parsingExif: _parsingExif,
-                    captionCtrl: _captionCtrl,
-                    titleCtrl: _titleCtrl,
-                    tags: _tags,
-                    selectedCategories: _selectedCategories,
-                    categories: categories,
-                    onTagsChanged: (tags) => setState(() => _tags = tags),
-                    onCategoryToggled: (categoryId) => setState(() {
-                      if (_selectedCategories.contains(categoryId)) {
-                        _selectedCategories.remove(categoryId);
-                      } else {
-                        _selectedCategories.add(categoryId);
-                      }
-                    }),
-                    onSuggestCategory: (name) async {
-                      final userId = currentUser?.id;
-                      if (userId == null) {
-                        throw const AuthException(
-                          'Bạn cần đăng nhập để đề xuất danh mục',
-                        );
-                      }
-                      await ref.read(categoryRepositoryProvider).suggestCategory(
-                            name: name,
-                            userId: userId,
-                          );
-                      ref.invalidate(categoriesProvider);
-                    },
-                    onSearchTags: (query) async {
-                      final results =
-                          await ref.read(tagRepositoryProvider).searchTags(query);
-                      return results
-                          .map((tag) => tag['name'] as String)
-                          .toList();
-                    },
-                    shareGps: _shareGps,
-                    allowDownload: _allowDownload,
-                    license: _selectedLicense,
-                    licenses: _licenses,
-                    onShareGpsChanged: (v) => setState(() => _shareGps = v),
-                    onDownloadChanged: (v) => setState(() => _allowDownload = v),
-                    onLicenseChanged: (v) => setState(() => _selectedLicense = v!),
-                    onBack: () => setState(() => _currentStep = 0),
-                    onUpload: _upload,
-                    isFilm: _isFilm,
-                    onFilmChanged: (v) => setState(() => _isFilm = v),
-                    filmCameraCtrl: _filmCameraCtrl,
-                    filmStockCtrl: _filmStockCtrl,
+                ? Column(
+                    children: [
+                      if (_errorMessage != null)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.errorContainer.withValues(alpha: 0.24),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: AppColors.error.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Text(
+                            _errorMessage!,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.error,
+                            ),
+                          ),
+                        ),
+                      Expanded(
+                        child: _DetailsStep(
+                          imageBytes: _selectedImageBytes!,
+                          exif: _parsedExif,
+                          parsingExif: _parsingExif,
+                          captionCtrl: _captionCtrl,
+                          titleCtrl: _titleCtrl,
+                          tags: _tags,
+                          selectedCategories: _selectedCategories,
+                          categories: categories,
+                          onTagsChanged: (tags) => setState(() => _tags = tags),
+                          onCategoryToggled: (categoryId) => setState(() {
+                            if (_selectedCategories.contains(categoryId)) {
+                              _selectedCategories.remove(categoryId);
+                            } else {
+                              _selectedCategories.add(categoryId);
+                            }
+                          }),
+                          onSuggestCategory: (name) async {
+                            final userId = currentUser?.id;
+                            if (userId == null) {
+                              throw const AuthException(
+                                'Bạn cần đăng nhập để đề xuất danh mục',
+                              );
+                            }
+                            await ref
+                                .read(categoryRepositoryProvider)
+                                .suggestCategory(
+                                  name: name,
+                                  userId: userId,
+                                );
+                            ref.invalidate(categoriesProvider);
+                          },
+                          onSearchTags: (query) async {
+                            final results = await ref
+                                .read(tagRepositoryProvider)
+                                .searchTags(query);
+                            return results
+                                .map((tag) => tag['name'] as String)
+                                .toList();
+                          },
+                          shareGps: _shareGps,
+                          allowDownload: _allowDownload,
+                          license: _selectedLicense,
+                          licenses: _licenses,
+                          onShareGpsChanged: (v) => setState(() => _shareGps = v),
+                          onDownloadChanged: (v) =>
+                              setState(() => _allowDownload = v),
+                          onLicenseChanged: (v) =>
+                              setState(() => _selectedLicense = v!),
+                          onBack: () => setState(() => _currentStep = 0),
+                          onUpload: _upload,
+                          isFilm: _isFilm,
+                          onFilmChanged: (v) => setState(() => _isFilm = v),
+                          filmCameraCtrl: _filmCameraCtrl,
+                          filmStockCtrl: _filmStockCtrl,
+                        ),
+                      ),
+                    ],
                   )
                 : const _UploadingStep(),
       ),
