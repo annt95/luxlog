@@ -25,9 +25,15 @@ final router = GoRouter(
     final session = SupabaseService.client.auth.currentSession;
     final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/signup';
 
-    // Only redirect: if already logged in and visiting auth pages → go home
+    // After OAuth: if user has session and is visiting auth pages → go home
     if (session != null && isLoggingIn) {
       return '/';
+    }
+
+    // After OAuth return: if URL has ?code= and user now has session, go to feed
+    final hasOAuthCode = state.uri.queryParameters.containsKey('code');
+    if (hasOAuthCode && session != null) {
+      return '/feed';
     }
 
     // Protected routes: require auth for upload, profile edit, notifications

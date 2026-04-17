@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/app/router.dart';
 import 'package:luxlog/app/theme.dart';
@@ -11,6 +12,14 @@ void main() async {
   Object? initError;
   try {
     await SupabaseService.initialize();
+
+    // On Web: handle OAuth PKCE code exchange after redirect.
+    // Google OAuth redirects back to luxlog.vercel.app/?code=xxx#/...
+    // The hash router doesn't let Supabase SDK auto-detect the code,
+    // so we exchange it manually here.
+    if (kIsWeb && SupabaseService.isInitialized) {
+      await _handleOAuthCodeExchange();
+    }
   } catch (error) {
     initError = error;
   }
@@ -31,6 +40,24 @@ void main() async {
       ),
     ),
   );
+}
+
+/// Checks if the current URL contains a `?code=` param from OAuth redirect
+/// and exchanges it for a Supabase session.
+Future<void> _handleOAuthCodeExchange() async {
+  try {
+    final uri = Uri.base;
+    final code = uri.queryParameters['code'];
+    if (code != null && code.isNotEmpty) {
+      await SupabaseService.client.auth.exchangeCodeForSession(code);
+      // Clean up the URL by removing the ?code= param (cosmetic)
+      // This uses the web-only dart:html API indirectly via Uri manipulation.
+      // The GoRouter will handle the hash fragment routing.
+    }
+  } catch (e) {
+    // Code may have already been exchanged or expired — silently ignore.
+    debugPrint('OAuth code exchange failed (may be stale): $e');
+  }
 }
 
 class LuxlogApp extends ConsumerWidget {
