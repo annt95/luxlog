@@ -174,7 +174,7 @@ class _PortfolioStats extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: AppColors.outlineVariant.withOpacity(0.2)),
+        border: Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: const [
@@ -261,8 +261,8 @@ class _ProjectCardState extends State<_ProjectCard> {
               borderRadius: BorderRadius.circular(4),
               border: Border.all(
                 color: _isHovered
-                    ? AppColors.primary.withOpacity(0.4)
-                    : AppColors.outlineVariant.withOpacity(0.2),
+                    ? AppColors.primary.withValues(alpha: 0.4)
+                    : AppColors.outlineVariant.withValues(alpha: 0.2),
               ),
             ),
             child: ClipRRect(
@@ -287,7 +287,7 @@ class _ProjectCardState extends State<_ProjectCard> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.6),
+                            color: Colors.black.withValues(alpha: 0.6),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(

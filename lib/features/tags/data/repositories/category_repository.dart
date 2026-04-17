@@ -85,7 +85,7 @@ class CategoryRepository {
       final catId = catResponse['id'] as String;
       final response = await _client
           .from('photo_categories')
-          .select('photos(*, users(username, avatar_url))')
+          .select('photos(*, profiles(username, avatar_url))')
           .eq('category_id', catId)
           .range(page * limit, (page + 1) * limit - 1);
 

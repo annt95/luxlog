@@ -23,6 +23,26 @@ final authRepositoryProvider = AutoDisposeProvider<AuthRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AuthRepositoryRef = AutoDisposeProviderRef<AuthRepository>;
+String _$authRemoteDataSourceHash() =>
+    r'8b81701f95f3133a0128f4f9b89382941f8a39c5';
+
+/// See also [authRemoteDataSource].
+@ProviderFor(authRemoteDataSource)
+final authRemoteDataSourceProvider =
+    AutoDisposeProvider<AuthRemoteDataSource>.internal(
+      authRemoteDataSource,
+      name: r'authRemoteDataSourceProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$authRemoteDataSourceHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef AuthRemoteDataSourceRef =
+    AutoDisposeProviderRef<AuthRemoteDataSource>;
 String _$authStateHash() => r'70ac2aaef0041bd37c768e7c5433cefdaa587b38';
 
 /// See also [authState].

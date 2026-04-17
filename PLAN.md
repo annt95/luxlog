@@ -6,6 +6,17 @@
 
 ---
 
+## ✅ Audit Remediation Update (2026-04-17)
+
+- Added hybrid schema migration: `users` renamed to `profiles`, `comments.body` renamed to `comments.text`, and `portfolios.blocks` added.
+- Added storage migration for `photos` bucket with RLS policies for owner uploads.
+- Hardened Supabase bootstrap with release fail-fast and debug config-missing fallback screen.
+- Wired auth profile sync into signup/OAuth repository flow and added datasource provider.
+- Replaced key mock usages with provider-backed data flow in upload/feed/profile/discover/explore.
+- Added repository-level and schema contract tests, plus CI workflow for analyze/build/test.
+
+---
+
 ## 📊 Rà soát Hiện trạng (Feature Audit)
 
 | Module | Trạng thái | Ghi chú |

@@ -104,7 +104,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           Positioned.fill(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-              child: Container(color: Colors.black.withOpacity(0.7)),
+              child: Container(color: Colors.black.withValues(alpha: 0.7)),
             ),
           ),
           SafeArea(
@@ -240,7 +240,7 @@ class _Logo extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.4),
+            color: AppColors.primary.withValues(alpha: 0.4),
             blurRadius: 24, spreadRadius: 0, offset: const Offset(0, 8),
           ),
         ],

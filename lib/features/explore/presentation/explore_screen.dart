@@ -7,8 +7,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/shared/widgets/tag_chip.dart';
+import 'package:luxlog/features/gallery/providers/photo_provider.dart';
 import 'package:luxlog/features/tags/providers/tag_provider.dart';
-import 'package:luxlog/features/tags/providers/category_provider.dart';
 
 /// Explore / Search screen
 class ExploreScreen extends ConsumerStatefulWidget {
@@ -38,13 +38,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     ('Film', Icons.camera_roll_outlined, 'https://picsum.photos/seed/g8/300/300'),
     ('Night', Icons.nights_stay_outlined, 'https://picsum.photos/seed/g9/300/300'),
     ('Aerial', Icons.flight_outlined, 'https://picsum.photos/seed/g10/300/300'),
-  ];
-
-  // Mock trending tags fallback
-  static const _fallbackTags = [
-    'goldenhour', 'streetphotography', 'portrait', 'blackandwhite',
-    'filmphotography', 'fujifilm', 'sony', 'nightscape', 'macro',
-    'landscapephotography', 'bokeh', 'leica', 'cinematic',
   ];
 
   @override
@@ -136,26 +129,17 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                       ),
                     );
                   },
-                  loading: () => ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemCount: _fallbackTags.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 6),
-                    itemBuilder: (context, i) => TagChip(
-                      tagName: _fallbackTags[i],
-                      onTap: () => context.push('/tag/${_fallbackTags[i]}'),
+                  loading: () => const Center(
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                        strokeWidth: 1.5,
+                      ),
                     ),
                   ),
-                  error: (_, __) => ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemCount: _fallbackTags.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 6),
-                    itemBuilder: (context, i) => TagChip(
-                      tagName: _fallbackTags[i],
-                      onTap: () => context.push('/tag/${_fallbackTags[i]}'),
-                    ),
-                  ),
+                  error: (_, __) => const SizedBox.shrink(),
                 ),
               ),
             ),
@@ -174,15 +158,33 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 ),
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
-              sliver: SliverMasonryGrid.count(
-                crossAxisCount: 3,
-                mainAxisSpacing: 6,
-                crossAxisSpacing: 6,
-                childCount: 18,
-                itemBuilder: (context, i) => _TrendingPhotoTile(index: i),
-              ),
+            ...ref.watch(photoFeedProvider(page: 0, limit: 18)).when(
+              data: (photos) => <Widget>[
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
+                  sliver: SliverMasonryGrid.count(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 6,
+                    crossAxisSpacing: 6,
+                    childCount: photos.length,
+                    itemBuilder: (context, i) =>
+                        _TrendingPhotoTile(photo: photos[i]),
+                  ),
+                ),
+              ],
+              loading: () => <Widget>[
+                const SliverToBoxAdapter(
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: CircularProgressIndicator(color: AppColors.primary),
+                    ),
+                  ),
+                ),
+              ],
+              error: (_, __) => <Widget>[
+                const SliverToBoxAdapter(child: SizedBox.shrink()),
+              ],
             ),
           ] else ...[
             // Search results placeholder
@@ -355,27 +357,30 @@ class _GenreTile extends StatelessWidget {
 }
 
 class _TrendingPhotoTile extends StatelessWidget {
-  final int index;
-  const _TrendingPhotoTile({required this.index});
+  final Map<String, dynamic> photo;
+  const _TrendingPhotoTile({required this.photo});
 
   @override
   Widget build(BuildContext context) {
     final aspectRatios = [1.0, 0.75, 1.25, 0.85, 1.1, 0.9];
+    final photoId = photo['id'] as String? ?? '';
+    final imageUrl = photo['image_url'] as String? ?? '';
+    final photoIndex = photoId.hashCode.abs();
     return GestureDetector(
-      onTap: () => context.push('/photo/trending_$index'),
+      onTap: () => context.push('/photo/$photoId'),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(3),
         child: AspectRatio(
-          aspectRatio: aspectRatios[index % aspectRatios.length],
+          aspectRatio: aspectRatios[photoIndex % aspectRatios.length],
           child: CachedNetworkImage(
-            imageUrl: 'https://picsum.photos/seed/trend_$index/400/400',
+            imageUrl: imageUrl,
             fit: BoxFit.cover,
             placeholder: (_, __) =>
                 Container(color: AppColors.surfaceContainerHigh),
           ),
         ),
       ),
-    ).animate(delay: Duration(milliseconds: index * 30)).fadeIn();
+    ).animate(delay: Duration(milliseconds: photoIndex % 300)).fadeIn();
   }
 }
 

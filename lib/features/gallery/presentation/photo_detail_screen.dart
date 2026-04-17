@@ -409,7 +409,7 @@ class _CommentsSection extends StatelessWidget {
                     color: AppColors.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(
-                      color: AppColors.outlineVariant.withOpacity(0.15),
+                      color: AppColors.outlineVariant.withValues(alpha: 0.15),
                     ),
                   ),
                   child: Align(
@@ -537,10 +537,10 @@ class _GlassBackButton extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.4),
+                color: Colors.black.withValues(alpha: 0.4),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                 ),
               ),
               child: const Icon(Icons.arrow_back, color: Colors.white, size: 18),
@@ -571,9 +571,9 @@ class _GlassIconButton extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.4),
+                color: Colors.black.withValues(alpha: 0.4),
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               ),
               child: Icon(icon, color: Colors.white, size: 18),
             ),

@@ -6,6 +6,8 @@ class UserRepository {
 
   UserRepository(this._client);
 
+  User? get currentUser => _client.auth.currentUser;
+
   Future<Map<String, dynamic>> fetchProfile(String username) async {
     try {
       final response = await _client
@@ -16,6 +18,34 @@ class UserRepository {
       return response;
     } catch (e) {
       throw const NetworkException('Lỗi tải hồ sơ người dùng');
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchCurrentProfile() async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) throw const AuthException();
+      final response = await _client
+          .from('profiles')
+          .select('*, followers:follows!following_id(count), following:follows!follower_id(count)')
+          .eq('id', userId)
+          .single();
+      return response;
+    } catch (e) {
+      throw const NetworkException('Lỗi tải hồ sơ hiện tại');
+    }
+  }
+
+  Future<String> resolveUserIdByUsername(String username) async {
+    try {
+      final response = await _client
+          .from('profiles')
+          .select('id')
+          .eq('username', username)
+          .single();
+      return response['id'] as String;
+    } catch (e) {
+      throw const NetworkException('Không tìm thấy người dùng');
     }
   }
 

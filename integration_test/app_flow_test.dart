@@ -7,7 +7,7 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('End-to-End App Flow Test', () {
-    testWidgets('Verify Feed Tabs, Comment Bottom Sheet, and Follow state', (WidgetTester tester) async {
+    testWidgets('Login -> Upload -> Profile flow smoke test', (WidgetTester tester) async {
       app.main();
       
       // Wait for the app to finish rendering components
@@ -56,7 +56,7 @@ void main() {
       await tester.tapAt(const Offset(10, 10)); // Tap outside
       await tester.pumpAndSettle();
 
-      // 4. Navigate to Profile by tapping the second item in Bottom Navigation Bar
+      // 4. Navigate to Profile by tapping profile tab
       final profileTab = find.byIcon(Icons.person_outline).last;
       await tester.tap(profileTab);
       await tester.pumpAndSettle();

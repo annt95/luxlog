@@ -1,11 +1,16 @@
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 import 'package:supabase_flutter/supabase_flutter.dart' as supa show AuthException;
 import '../../../../core/errors/app_exception.dart';
+import '../datasources/auth_remote_datasource.dart';
 
 class AuthRepository {
   final SupabaseClient _client;
+  final AuthRemoteDataSource _remoteDataSource;
 
-  AuthRepository(this._client);
+  AuthRepository(
+    this._client, {
+    AuthRemoteDataSource? remoteDataSource,
+  }) : _remoteDataSource = remoteDataSource ?? AuthRemoteDataSource(_client);
 
   // Email/Password
   Future<AuthResponse> signUp({
@@ -19,6 +24,10 @@ class AuthRepository {
         password: password,
         data: {'display_name': displayName},
       );
+      final user = response.user ?? _client.auth.currentUser;
+      if (user != null) {
+        await _remoteDataSource.syncUserProfile(user);
+      }
       return response;
     } on supa.AuthException catch (e) {
       throw AuthException(e.message);
@@ -47,6 +56,10 @@ class AuthRepository {
   Future<void> signInWithGoogle() async {
     try {
       await _client.auth.signInWithOAuth(OAuthProvider.google);
+      final user = _client.auth.currentUser;
+      if (user != null) {
+        await _remoteDataSource.syncUserProfile(user);
+      }
     } catch (e) {
       throw AuthException('Google sign in failed');
     }
@@ -55,6 +68,10 @@ class AuthRepository {
   Future<void> signInWithFacebook() async {
     try {
       await _client.auth.signInWithOAuth(OAuthProvider.facebook);
+      final user = _client.auth.currentUser;
+      if (user != null) {
+        await _remoteDataSource.syncUserProfile(user);
+      }
     } catch (e) {
       throw AuthException('Facebook sign in failed');
     }

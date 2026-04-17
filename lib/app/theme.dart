@@ -162,9 +162,7 @@ class AppTheme {
         onSurfaceVariant: AppColors.onSurfaceVariant,
         outline: AppColors.outline,
         outlineVariant: AppColors.outlineVariant,
-        background: AppColors.background,
-        onBackground: AppColors.onBackground,
-        surfaceVariant: AppColors.surfaceVariant,
+        surfaceContainerHighest: AppColors.surfaceContainerHighest,
         inversePrimary: AppColors.inversePrimary,
       ),
 
@@ -255,7 +253,7 @@ class AppTheme {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(4),
           borderSide: BorderSide(
-            color: AppColors.outlineVariant.withOpacity(0.15),
+            color: AppColors.outlineVariant.withValues(alpha: 0.15),
           ),
         ),
         focusedBorder: OutlineInputBorder(

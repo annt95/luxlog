@@ -68,8 +68,8 @@ class _PhotoCardState extends State<PhotoCard> {
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
               color: _isHovered
-                  ? AppColors.primary.withOpacity(0.3)
-                  : AppColors.outlineVariant.withOpacity(0.15),
+                  ? AppColors.primary.withValues(alpha: 0.3)
+                  : AppColors.outlineVariant.withValues(alpha: 0.15),
               width: 1,
             ),
           ),
@@ -123,7 +123,7 @@ class _PhotoCardState extends State<PhotoCard> {
                                     : Icons.favorite_border,
                                 color: _liked
                                     ? AppColors.error
-                                    : Colors.white.withOpacity(0.8),
+                                    : Colors.white.withValues(alpha: 0.8),
                                 onTap: _toggleLike,
                               ),
                             ),
@@ -229,10 +229,10 @@ class _GlassActionButton extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
+          color: Colors.white.withValues(alpha: 0.15),
           shape: BoxShape.circle,
           border: Border.all(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withValues(alpha: 0.1),
             width: 1,
           ),
         ),

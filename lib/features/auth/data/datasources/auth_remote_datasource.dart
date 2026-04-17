@@ -6,6 +6,18 @@ class AuthRemoteDataSource {
 
   AuthRemoteDataSource(this._client);
 
+  String _buildUsername({
+    required String displayName,
+    required String userId,
+  }) {
+    final normalized = displayName
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final base = normalized.isEmpty ? 'user' : normalized;
+    final suffixLength = userId.length < 8 ? userId.length : 8;
+    return '$base${userId.substring(0, suffixLength)}';
+  }
+
   Future<void> syncUserProfile(User user) async {
     try {
       final existingProfile = await _client
@@ -32,10 +44,12 @@ class AuthRemoteDataSource {
 
         await _client.from('profiles').insert({
           'id': user.id,
-          'username': displayName.toLowerCase().replaceAll(' ', '') + user.id.substring(0, 4),
-          'display_name': displayName,
+          'username': _buildUsername(
+            displayName: displayName,
+            userId: user.id,
+          ),
+          'email': user.email,
           'avatar_url': avatarUrl,
-          'created_at': DateTime.now().toIso8601String(),
         });
       }
     } catch (e) {

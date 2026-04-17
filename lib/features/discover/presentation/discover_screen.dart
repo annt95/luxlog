@@ -21,8 +21,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   final ScrollController _scrollController = ScrollController();
   int _selectedFilter = 0;
 
-  List<String> _filters = ['All', 'Trending'];
-
   @override
   void initState() {
     super.initState();
@@ -39,14 +37,15 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   Widget build(BuildContext context) {
     // Load categories for filter chips
     final categoriesAsync = ref.watch(categoriesProvider);
-    categoriesAsync.whenData((cats) {
-      final catNames = cats.map((c) => c['name'] as String).toList();
-      if (_filters.length <= 2) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) setState(() => _filters = ['All', 'Trending', ...catNames]);
-        });
-      }
-    });
+    final categories = categoriesAsync.valueOrNull ?? const <Map<String, dynamic>>[];
+    final filters = [
+      'All',
+      'Trending',
+      ...categories.map((c) => c['name'] as String? ?? 'Unknown'),
+    ];
+    if (_selectedFilter >= filters.length) {
+      _selectedFilter = 0;
+    }
 
     // Load photo feed
     final feedAsync = ref.watch(photoFeedProvider(page: 0, limit: 24));
@@ -72,7 +71,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           // ── Filter chips ─────────────────────────────────
           SliverToBoxAdapter(
             child: _FilterRow(
-              filters: _filters,
+              filters: filters,
               selected: _selectedFilter,
               onSelect: (i) => setState(() => _selectedFilter = i),
             ),
@@ -124,7 +123,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                   final profile = p['profiles'] as Map<String, dynamic>?;
                   return PhotoCard(
                     photoId: p['id'] as String,
-                    imageUrl: p['image_url'] as String? ?? 'https://picsum.photos/seed/$i/800/600',
+                    imageUrl: p['image_url'] as String? ?? '',
                     photographerName: profile?['username'] as String? ?? 'Unknown',
                     photographerAvatar: profile?['avatar_url'] as String?,
                     title: p['title'] as String?,
@@ -292,7 +291,7 @@ class _FilterRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(
                   color: isSelected
-                      ? AppColors.primary.withOpacity(0.5)
+                      ? AppColors.primary.withValues(alpha: 0.5)
                       : Colors.transparent,
                 ),
               ),

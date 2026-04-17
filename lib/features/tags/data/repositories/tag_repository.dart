@@ -71,7 +71,7 @@ class TagRepository {
       final tagId = tagResponse['id'] as String;
       final response = await _client
           .from('photo_tags')
-          .select('photos(*, users(username, avatar_url))')
+          .select('photos(*, profiles(username, avatar_url))')
           .eq('tag_id', tagId)
           .range(page * limit, (page + 1) * limit - 1);
 

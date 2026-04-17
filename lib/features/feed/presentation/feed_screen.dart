@@ -19,29 +19,6 @@ class FeedScreen extends ConsumerStatefulWidget {
 class _FeedScreenState extends ConsumerState<FeedScreen> {
   final _scrollController = ScrollController();
 
-  // Mock posts
-  static final _posts = List.generate(12, (i) => _MockPost(
-    id: 'post_$i',
-    userId: 'user_$i',
-    username: ['marcuschen', 'sarahkwon', 'riophoto', 'alexm', 'linara'][i % 5],
-    displayName: ['Marcus Chen', 'Sarah Kwon', 'Rio Photo', 'Alex M.', 'Lina Ra'][i % 5],
-    imageUrl: 'https://picsum.photos/seed/feed_$i/800/600',
-    caption: [
-      'Golden hour in Santorini. Nothing beats natural light. 📷✨',
-      'Street photography is all about patience and timing.',
-      'Found this little cafe hidden in the alley. Perfect light, perfect shot.',
-      'Sony 35GM at ƒ/1.4 — the bokeh gods smiled today 🙏',
-      'Film simulation: Classic Chrome. Some shots just hit different.',
-    ][i % 5],
-    likes: 120 + i * 43,
-    comments: 8 + i * 3,
-    isLiked: i % 3 == 0,
-    timeAgo: ['2m', '15m', '1h', '3h', '5h', '8h', '1d', '2d'][i % 8],
-    camera: ['Sony α7 IV', 'Fuji X-T5', 'Leica M11', 'Nikon Z8', 'Canon R5'][i % 5],
-    exifShort: ['35mm · ƒ/1.4 · ISO 400', '23mm · ƒ/2 · ISO 200', '50mm · ƒ/2.8 · ISO 800', '85mm · ƒ/1.8 · ISO 640', '35mm · ƒ/4 · ISO 100'][i % 5],
-    aspect: [4 / 3.0, 1.0, 4 / 5.0, 16 / 9.0, 3 / 4.0][i % 5],
-  ));
-
   int _selectedTab = 0; // 0: For You, 1: Following
 
   @override
@@ -52,9 +29,13 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final displayPosts = _selectedTab == 0
-        ? _posts
-        : _posts.where((p) => p.isLiked).toList(); // Mock filtering for Following
+    final feedAsync = ref.watch(
+      photoFeedProvider(
+        page: 0,
+        limit: 24,
+        tab: _selectedTab == 0 ? 'for-you' : 'following',
+      ),
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -85,28 +66,58 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           ),
 
           // Post feed
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, i) {
-                if (displayPosts.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.all(40),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(Icons.feed_outlined, size: 60, color: AppColors.onSurfaceVariant),
-                          SizedBox(height: 16),
-                          Text("No posts found. Start following someone!", style: TextStyle(color: Colors.grey)),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-                if (i >= displayPosts.length) return _LoadingIndicator();
-                return _PostCard(key: ValueKey(displayPosts[i].id), post: displayPosts[i]);
-              },
-              childCount: displayPosts.isEmpty ? 1 : displayPosts.length + 1,
-            ),
+          ...feedAsync.when(
+            data: (photos) {
+              final posts = photos.map(_MockPost.fromRow).toList();
+              return <Widget>[
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, i) {
+                      if (posts.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.all(40),
+                          child: Center(
+                            child: Column(
+                              children: [
+                                Icon(Icons.feed_outlined, size: 60, color: AppColors.onSurfaceVariant),
+                                SizedBox(height: 16),
+                                Text(
+                                  'No posts found yet.',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                      if (i >= posts.length) return _LoadingIndicator();
+                      return _PostCard(
+                        key: ValueKey(posts[i].id),
+                        post: posts[i],
+                      );
+                    },
+                    childCount: posts.isEmpty ? 1 : posts.length + 1,
+                  ),
+                ),
+              ];
+            },
+            loading: () => <Widget>[
+              const SliverFillRemaining(
+                child: Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                ),
+              ),
+            ],
+            error: (error, _) => <Widget>[
+              SliverFillRemaining(
+                child: Center(
+                  child: Text(
+                    'Failed to load feed',
+                    style: AppTextStyles.body,
+                  ),
+                ),
+              ),
+            ],
           ),
 
           const SliverToBoxAdapter(child: SizedBox(height: 96)),
@@ -141,6 +152,37 @@ class _MockPost {
     required this.exifShort,
     required this.aspect,
   });
+
+  factory _MockPost.fromRow(Map<String, dynamic> row) {
+    final profile = row['profiles'] as Map<String, dynamic>?;
+    final username = profile?['username'] as String? ?? 'photographer';
+    final title = row['title'] as String? ?? '';
+    final caption = row['caption'] as String? ?? row['description'] as String? ?? '';
+    final camera = row['camera'] as String? ?? 'Camera';
+    final focalLength = row['focal_length'] as String?;
+    final aperture = row['aperture'] as String?;
+    final iso = row['iso'] as int?;
+
+    return _MockPost(
+      id: row['id'] as String? ?? '',
+      userId: row['user_id'] as String? ?? '',
+      username: username,
+      displayName: username,
+      imageUrl: row['image_url'] as String? ?? '',
+      caption: caption.isNotEmpty ? caption : title,
+      likes: row['likes_count'] as int? ?? 0,
+      comments: row['comments_count'] as int? ?? 0,
+      isLiked: false,
+      timeAgo: 'recent',
+      camera: camera,
+      exifShort: [
+        if (focalLength != null && focalLength.isNotEmpty) '${focalLength}mm',
+        if (aperture != null && aperture.isNotEmpty) 'f/$aperture',
+        if (iso != null) 'ISO $iso',
+      ].join(' · '),
+      aspect: 4 / 5,
+    );
+  }
 }
 
 // ── Feed AppBar ───────────────────────────────────────────────────────────────
@@ -344,7 +386,6 @@ class _PostCard extends StatefulWidget {
 class _PostCardState extends State<_PostCard> {
   late bool _liked;
   late int _likes;
-  DateTime? _lastTap;
 
   @override
   void initState() {

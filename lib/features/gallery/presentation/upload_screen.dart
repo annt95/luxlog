@@ -6,10 +6,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:exif/exif.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/core/errors/app_exception.dart';
+import 'package:luxlog/features/auth/providers/auth_provider.dart';
 import 'package:luxlog/shared/widgets/exif_badge.dart';
 import 'package:luxlog/shared/widgets/tag_input_widget.dart';
 import 'package:luxlog/shared/widgets/tag_chip.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
+import 'package:luxlog/features/tags/providers/category_provider.dart';
+import 'package:luxlog/features/tags/providers/tag_provider.dart';
 
 /// Upload screen — image picker + EXIF parse + preview + Film Mode
 class UploadScreen extends ConsumerStatefulWidget {
@@ -24,7 +27,6 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   Uint8List? _selectedImageBytes;
   ExifInfo? _parsedExif;
   bool _parsingExif = false;
-  bool _uploading = false;
   int _currentStep = 0; // 0: pick, 1: details, 2: uploading
   String? _errorMessage;
 
@@ -33,25 +35,11 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   final _filmCameraCtrl = TextEditingController();
   final _filmStockCtrl = TextEditingController();
   List<String> _tags = [];
-  List<String> _selectedCategories = []; // category slugs
+  List<String> _selectedCategories = []; // category IDs
   bool _shareGps = false;
   bool _allowDownload = true;
   bool _isFilm = false;
   String _selectedLicense = 'CC BY 4.0';
-
-  // Mock categories (will be replaced with DB data)
-  static const _mockCategories = [
-    ('portrait', 'Portrait'),
-    ('landscape', 'Landscape'),
-    ('street', 'Street'),
-    ('wildlife', 'Wildlife'),
-    ('architecture', 'Architecture'),
-    ('black-and-white', 'Black & White'),
-    ('macro', 'Macro'),
-    ('film', 'Film'),
-    ('night', 'Night'),
-    ('aerial', 'Aerial'),
-  ];
 
   static const _licenses = ['CC BY 4.0', 'CC BY-SA 4.0', 'CC BY-NC 4.0', 'All Rights Reserved'];
 
@@ -223,13 +211,12 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
     }
 
     setState(() {
-      _uploading = true;
       _currentStep = 2;
       _errorMessage = null;
     });
 
     try {
-      await ref.read(photoRepositoryProvider).uploadPhoto(
+      final photoId = await ref.read(photoRepositoryProvider).uploadPhoto(
         fileBytes: _selectedImageBytes!,
         fileName: _selectedImage!.name,
         title: _titleCtrl.text.trim(),
@@ -248,9 +235,17 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         latitude: _parsedExif?.latitude,
         longitude: _parsedExif?.longitude,
         shareGps: _shareGps,
-        tagNames: _tags,
-        categoryIds: _selectedCategories,
       );
+
+      if (_tags.isNotEmpty) {
+        await ref.read(tagRepositoryProvider).attachTagsToPhoto(photoId, _tags);
+      }
+      if (_selectedCategories.isNotEmpty) {
+        await ref
+            .read(categoryRepositoryProvider)
+            .attachCategoriesToPhoto(photoId, _selectedCategories);
+      }
+
       // Invalidate feed so new photo appears
       ref.invalidate(photoFeedProvider);
       if (mounted) Navigator.of(context).pop();
@@ -260,7 +255,6 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           : 'Upload failed. Please try again.';
       if (mounted) {
         setState(() {
-          _uploading = false;
           _currentStep = 1;
           _errorMessage = message;
         });
@@ -276,6 +270,9 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final categories = ref.watch(categoriesProvider).valueOrNull ?? const [];
+    final currentUser = ref.watch(currentUserProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -290,15 +287,35 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                     titleCtrl: _titleCtrl,
                     tags: _tags,
                     selectedCategories: _selectedCategories,
-                    mockCategories: _mockCategories,
+                    categories: categories,
                     onTagsChanged: (tags) => setState(() => _tags = tags),
-                    onCategoryToggled: (slug) => setState(() {
-                      if (_selectedCategories.contains(slug)) {
-                        _selectedCategories.remove(slug);
+                    onCategoryToggled: (categoryId) => setState(() {
+                      if (_selectedCategories.contains(categoryId)) {
+                        _selectedCategories.remove(categoryId);
                       } else {
-                        _selectedCategories.add(slug);
+                        _selectedCategories.add(categoryId);
                       }
                     }),
+                    onSuggestCategory: (name) async {
+                      final userId = currentUser?.id;
+                      if (userId == null) {
+                        throw const AuthException(
+                          'Bạn cần đăng nhập để đề xuất danh mục',
+                        );
+                      }
+                      await ref.read(categoryRepositoryProvider).suggestCategory(
+                            name: name,
+                            userId: userId,
+                          );
+                      ref.invalidate(categoriesProvider);
+                    },
+                    onSearchTags: (query) async {
+                      final results =
+                          await ref.read(tagRepositoryProvider).searchTags(query);
+                      return results
+                          .map((tag) => tag['name'] as String)
+                          .toList();
+                    },
                     shareGps: _shareGps,
                     allowDownload: _allowDownload,
                     license: _selectedLicense,
@@ -453,9 +470,11 @@ class _DetailsStep extends StatelessWidget {
   final TextEditingController titleCtrl;
   final List<String> tags;
   final List<String> selectedCategories;
-  final List<(String, String)> mockCategories;
+  final List<Map<String, dynamic>> categories;
   final ValueChanged<List<String>> onTagsChanged;
   final ValueChanged<String> onCategoryToggled;
+  final Future<void> Function(String name) onSuggestCategory;
+  final Future<List<String>> Function(String query) onSearchTags;
   final bool shareGps;
   final bool allowDownload;
   final String license;
@@ -478,9 +497,11 @@ class _DetailsStep extends StatelessWidget {
     required this.titleCtrl,
     required this.tags,
     required this.selectedCategories,
-    required this.mockCategories,
+    required this.categories,
     required this.onTagsChanged,
     required this.onCategoryToggled,
+    required this.onSuggestCategory,
+    required this.onSearchTags,
     required this.shareGps,
     required this.allowDownload,
     required this.license,
@@ -530,18 +551,33 @@ class _DetailsStep extends StatelessWidget {
             child: Text('Cancel', style: AppTextStyles.label.copyWith(color: AppColors.onSurfaceVariant)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               if (nameCtrl.text.trim().isNotEmpty) {
-                // TODO: Call CategoryRepository.suggestCategory() when Supabase is connected
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Category "${nameCtrl.text.trim()}" suggested! It will be reviewed.'),
-                    backgroundColor: AppColors.primaryContainer,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                try {
+                  await onSuggestCategory(nameCtrl.text.trim());
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Category "${nameCtrl.text.trim()}" suggested!',
+                        ),
+                        backgroundColor: AppColors.primaryContainer,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                } on AppException catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(e.message),
+                        backgroundColor: AppColors.errorContainer,
+                      ),
+                    );
+                  }
+                }
               }
-              Navigator.of(ctx).pop();
+              if (ctx.mounted) Navigator.of(ctx).pop();
             },
             child: const Text('Submit'),
           ),
@@ -635,15 +671,7 @@ class _DetailsStep extends StatelessWidget {
                 TagInputWidget(
                   tags: tags,
                   onTagsChanged: onTagsChanged,
-                  onSearch: (query) async {
-                    // TODO: Replace with TagRepository.searchTags(query)
-                    final mockTags = ['goldenhour', 'sunset', 'portrait', 'landscape',
-                      'streetphotography', 'film', 'blackandwhite', 'macro',
-                      'nightphotography', 'aerial', 'sony', 'fujifilm', 'leica'];
-                    return mockTags
-                        .where((t) => t.contains(query.toLowerCase()))
-                        .toList();
-                  },
+                  onSearch: onSearchTags,
                 ),
 
                 const SizedBox(height: 20),
@@ -655,13 +683,15 @@ class _DetailsStep extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    ...mockCategories.map((cat) {
-                      final isSelected = selectedCategories.contains(cat.$1);
+                    ...categories.map((cat) {
+                      final categoryId = cat['id'] as String;
+                      final categoryName = cat['name'] as String? ?? 'Unknown';
+                      final isSelected = selectedCategories.contains(categoryId);
                       return TagChip(
-                        tagName: cat.$2,
+                        tagName: categoryName,
                         showHash: false,
                         isSelected: isSelected,
-                        onTap: () => onCategoryToggled(cat.$1),
+                        onTap: () => onCategoryToggled(categoryId),
                       );
                     }),
                     // Suggest new category button
@@ -673,7 +703,7 @@ class _DetailsStep extends StatelessWidget {
                           color: Colors.transparent,
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                            color: AppColors.primary.withOpacity(0.5),
+                            color: AppColors.primary.withValues(alpha: 0.5),
                             style: BorderStyle.solid,
                           ),
                         ),
@@ -927,7 +957,7 @@ class _ToggleRow extends StatelessWidget {
         color: AppColors.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(4),
         border: isWarning && value
-            ? Border.all(color: AppColors.error.withOpacity(0.3))
+            ? Border.all(color: AppColors.error.withValues(alpha: 0.3))
             : null,
       ),
       child: Row(

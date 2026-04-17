@@ -55,9 +55,6 @@ class PhotoRepository {
     double? latitude,
     double? longitude,
     bool shareGps = false,
-    // Tags & categories
-    List<String> tagNames = const [],
-    List<String> categoryIds = const [],
   }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw const AuthException('Vui lòng đăng nhập để tải ảnh');
@@ -112,32 +109,6 @@ class PhotoRepository {
           .single();
 
       final photoId = response['id'] as String;
-
-      // 6. Attach tags (upsert tag names → get IDs → link)
-      for (final tagName in tagNames) {
-        try {
-          final tagId = await _client.rpc('increment_tag_usage', params: {'tag_name': tagName});
-          await _client.from('photo_tags').insert({
-            'photo_id': photoId,
-            'tag_id': tagId,
-          });
-        } catch (_) {
-          // Non-critical: skip tag if it fails
-        }
-      }
-
-      // 7. Attach categories
-      if (categoryIds.isNotEmpty) {
-        final catRows = categoryIds.map((catId) => {
-          'photo_id': photoId,
-          'category_id': catId,
-        }).toList();
-        try {
-          await _client.from('photo_categories').upsert(catRows);
-        } catch (_) {
-          // Non-critical
-        }
-      }
 
       return photoId;
     } catch (e) {

@@ -8,6 +8,7 @@ import 'package:luxlog/app/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/features/profile/providers/follow_state_provider.dart';
 import 'package:luxlog/features/profile/providers/user_provider.dart';
+import 'package:luxlog/features/gallery/providers/photo_provider.dart';
 
 /// User Profile Screen — portfolio preview + photo grid + bio
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -37,54 +38,72 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Read from FollowState Provider
-    final isFollowing = ref.watch(followStateProvider).contains(widget.username);
+    final profileAsync = widget.username == 'me'
+        ? ref.watch(currentUserProfileProvider)
+        : ref.watch(userProfileProvider(widget.username));
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          // Collapsing cover + profile info
-          SliverAppBar(
-            expandedHeight: 340,
-            pinned: true,
-            backgroundColor: AppColors.background,
-            elevation: 0,
-            leading: _GlassIconButton(
-              icon: Icons.arrow_back,
-              onTap: () => Navigator.of(context).maybePop(),
-            ),
-            actions: [
-              _GlassIconButton(icon: Icons.share_outlined, onTap: () {}),
-              _GlassIconButton(icon: Icons.more_horiz, onTap: () {}),
-              const SizedBox(width: 8),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              collapseMode: CollapseMode.parallax,
-              background: _ProfileHeader(
-                username: widget.username,
-                isFollowing: isFollowing,
-                onFollow: () => ref.read(followStateProvider.notifier).toggleFollow(widget.username),
-              ),
-            ),
-          ),
-
-          // Sticky tab bar
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _TabBarDelegate(tabCtrl: _tabCtrl, tabs: _tabs),
-          ),
-        ],
-        body: TabBarView(
-          controller: _tabCtrl,
-          children: [
-            _PhotosTab(username: widget.username),
-            _PortfolioTab(username: widget.username),
-            _CollectionsTab(),
-            _GearTab(),
-          ],
-        ),
+    return profileAsync.when(
+      loading: () => const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
       ),
+      error: (_, __) => const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(child: Text('Failed to load profile')),
+      ),
+      data: (profile) {
+        final profileUsername = profile['username'] as String? ?? widget.username;
+        final profileId = profile['id'] as String?;
+        final isOwnProfile = widget.username == 'me';
+        final isFollowing = ref.watch(followStateProvider).contains(profileUsername);
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) => [
+              SliverAppBar(
+                expandedHeight: 340,
+                pinned: true,
+                backgroundColor: AppColors.background,
+                elevation: 0,
+                leading: _GlassIconButton(
+                  icon: Icons.arrow_back,
+                  onTap: () => Navigator.of(context).maybePop(),
+                ),
+                actions: [
+                  _GlassIconButton(icon: Icons.share_outlined, onTap: () {}),
+                  _GlassIconButton(icon: Icons.more_horiz, onTap: () {}),
+                  const SizedBox(width: 8),
+                ],
+                flexibleSpace: FlexibleSpaceBar(
+                  collapseMode: CollapseMode.parallax,
+                  background: _ProfileHeader(
+                    profile: profile,
+                    isFollowing: isFollowing,
+                    showFollowActions: !isOwnProfile,
+                    onFollow: () => ref
+                        .read(followStateProvider.notifier)
+                        .toggleFollow(profileUsername),
+                  ),
+                ),
+              ),
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _TabBarDelegate(tabCtrl: _tabCtrl, tabs: _tabs),
+              ),
+            ],
+            body: TabBarView(
+              controller: _tabCtrl,
+              children: [
+                _PhotosTab(username: profileUsername, profileId: profileId),
+                _PortfolioTab(username: profileUsername),
+                _CollectionsTab(),
+                _GearTab(),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -92,18 +111,36 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 // ── Profile Header ────────────────────────────────────────────────────────────
 
 class _ProfileHeader extends StatelessWidget {
-  final String username;
+  final Map<String, dynamic> profile;
   final bool isFollowing;
+  final bool showFollowActions;
   final VoidCallback onFollow;
 
   const _ProfileHeader({
-    required this.username,
+    required this.profile,
     required this.isFollowing,
+    required this.showFollowActions,
     required this.onFollow,
   });
 
   @override
   Widget build(BuildContext context) {
+    final username = profile['username'] as String? ?? 'user';
+    final avatarUrl = profile['avatar_url'] as String?;
+    final bio = profile['bio'] as String? ?? '';
+    final followers = profile['followers'] as List<dynamic>?;
+    final following = profile['following'] as List<dynamic>?;
+    final followersCount = followers != null &&
+            followers.isNotEmpty &&
+            followers.first is Map<String, dynamic>
+        ? (followers.first as Map<String, dynamic>)['count'] as int? ?? 0
+        : 0;
+    final followingCount = following != null &&
+            following.isNotEmpty &&
+            following.first is Map<String, dynamic>
+        ? (following.first as Map<String, dynamic>)['count'] as int? ?? 0
+        : 0;
+
     return Stack(
       children: [
         // Cover image
@@ -153,28 +190,35 @@ class _ProfileHeader extends StatelessWidget {
                       ),
                       child: CircleAvatar(
                         backgroundColor: AppColors.surfaceContainerHigh,
-                        backgroundImage: NetworkImage(
-                          'https://i.pravatar.cc/150?u=$username',
-                        ),
+                        backgroundImage:
+                            avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                        child: avatarUrl == null
+                            ? Text(
+                                username.isNotEmpty
+                                    ? username[0].toUpperCase()
+                                    : 'U',
+                                style: AppTextStyles.label,
+                              )
+                            : null,
                       ),
                     ),
                     const Spacer(),
-                    // Buttons
-                    Row(
-                      children: [
-                        _ProfileButton(
-                          label: isFollowing ? 'Following' : 'Follow',
-                          isPrimary: !isFollowing,
-                          onTap: onFollow,
-                        ),
-                        const SizedBox(width: 8),
-                        _ProfileButton(
-                          label: 'Message',
-                          isPrimary: false,
-                          onTap: () {},
-                        ),
-                      ],
-                    ),
+                    if (showFollowActions)
+                      Row(
+                        children: [
+                          _ProfileButton(
+                            label: isFollowing ? 'Following' : 'Follow',
+                            isPrimary: !isFollowing,
+                            onTap: onFollow,
+                          ),
+                          const SizedBox(width: 8),
+                          _ProfileButton(
+                            label: 'Message',
+                            isPrimary: false,
+                            onTap: () {},
+                          ),
+                        ],
+                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -186,7 +230,9 @@ class _ProfileHeader extends StatelessWidget {
                 const SizedBox(height: 4),
                 // Bio
                 Text(
-                  'Documentary & Street Photographer · Sony Alpha · Tokyo 🇯🇵',
+                  bio.isEmpty
+                      ? 'Photographer on Luxlog'
+                      : bio,
                   style: AppTextStyles.body.copyWith(
                     color: AppColors.onSurfaceVariant,
                   ),
@@ -197,9 +243,9 @@ class _ProfileHeader extends StatelessWidget {
                   children: [
                     _StatBadge(value: '2.4k', label: 'Photos'),
                     const SizedBox(width: 20),
-                    _StatBadge(value: '14.2k', label: 'Followers'),
+                    _StatBadge(value: '$followersCount', label: 'Followers'),
                     const SizedBox(width: 20),
-                    _StatBadge(value: '312', label: 'Following'),
+                    _StatBadge(value: '$followingCount', label: 'Following'),
                     const SizedBox(width: 20),
                     _StatBadge(value: '847k', label: 'Views'),
                   ],
@@ -315,30 +361,60 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
 
 class _PhotosTab extends StatelessWidget {
   final String username;
-  const _PhotosTab({required this.username});
+  final String? profileId;
+
+  const _PhotosTab({
+    required this.username,
+    required this.profileId,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return MasonryGridView.count(
-      crossAxisCount: 3,
-      mainAxisSpacing: 3,
-      crossAxisSpacing: 3,
-      padding: const EdgeInsets.fromLTRB(3, 3, 3, 96),
-      itemCount: 24,
-      itemBuilder: (context, i) {
-        final aspects = [1.0, 0.75, 1.25, 0.85, 1.1, 0.7];
-        return GestureDetector(
-          onTap: () => context.push('/photo/${username}_photo_$i'),
-          child: AspectRatio(
-            aspectRatio: aspects[i % aspects.length],
-            child: CachedNetworkImage(
-              imageUrl: 'https://picsum.photos/seed/${username}_$i/400/400',
-              fit: BoxFit.cover,
-              placeholder: (_, __) =>
-                  Container(color: AppColors.surfaceContainerHigh),
-            ),
+    return Consumer(
+      builder: (context, ref, _) {
+        final photosAsync = ref.watch(photoFeedProvider(page: 0, limit: 100));
+        return photosAsync.when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
           ),
-        ).animate(delay: Duration(milliseconds: i * 20)).fadeIn();
+          error: (_, __) => const Center(child: Text('Failed to load photos')),
+          data: (photos) {
+            final ownPhotos = photos.where((photo) {
+              if (profileId != null) {
+                return photo['user_id'] == profileId;
+              }
+              final profile = photo['profiles'] as Map<String, dynamic>?;
+              return profile?['username'] == username;
+            }).toList();
+
+            if (ownPhotos.isEmpty) {
+              return const Center(child: Text('No photos yet'));
+            }
+
+            return MasonryGridView.count(
+              crossAxisCount: 3,
+              mainAxisSpacing: 3,
+              crossAxisSpacing: 3,
+              padding: const EdgeInsets.fromLTRB(3, 3, 3, 96),
+              itemCount: ownPhotos.length,
+              itemBuilder: (context, i) {
+                final photo = ownPhotos[i];
+                return GestureDetector(
+                  onTap: () => context.push('/photo/${photo['id']}'),
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: CachedNetworkImage(
+                      imageUrl: photo['image_url'] as String? ?? '',
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) =>
+                          Container(color: AppColors.surfaceContainerHigh),
+                    ),
+                  ),
+                ).animate(delay: Duration(milliseconds: i * 20)).fadeIn();
+              },
+            );
+          },
+        );
       },
     );
   }
@@ -554,9 +630,9 @@ class _GlassIconButton extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.4),
+                color: Colors.black.withValues(alpha: 0.4),
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               ),
               child: Icon(icon, color: Colors.white, size: 18),
             ),

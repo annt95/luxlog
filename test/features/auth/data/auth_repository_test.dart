@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 import 'package:supabase_flutter/supabase_flutter.dart' as supa show AuthException;
+import 'package:luxlog/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:luxlog/features/auth/data/repositories/auth_repository.dart';
 import 'package:luxlog/core/errors/app_exception.dart';
 
@@ -9,27 +10,37 @@ class MockSupabaseClient extends Mock implements SupabaseClient {}
 class MockGoTrueClient extends Mock implements GoTrueClient {}
 class MockAuthResponse extends Mock implements AuthResponse {}
 class MockUser extends Mock implements User {}
+class MockAuthRemoteDataSource extends Mock implements AuthRemoteDataSource {}
 
 void main() {
   late MockSupabaseClient mockSupabaseClient;
   late MockGoTrueClient mockAuthClient;
+  late MockAuthRemoteDataSource mockRemoteDataSource;
   late AuthRepository authRepository;
 
   setUp(() {
     mockSupabaseClient = MockSupabaseClient();
     mockAuthClient = MockGoTrueClient();
+    mockRemoteDataSource = MockAuthRemoteDataSource();
     when(() => mockSupabaseClient.auth).thenReturn(mockAuthClient);
-    authRepository = AuthRepository(mockSupabaseClient);
+    authRepository = AuthRepository(
+      mockSupabaseClient,
+      remoteDataSource: mockRemoteDataSource,
+    );
   });
 
   group('AuthRepository', () {
     test('signUp returns AuthResponse on success', () async {
       final mockResponse = MockAuthResponse();
+      final mockUser = MockUser();
       when(() => mockAuthClient.signUp(
             email: 'test@example.com',
             password: 'password123',
             data: {'display_name': 'Test User'},
           )).thenAnswer((_) async => mockResponse);
+      when(() => mockResponse.user).thenReturn(mockUser);
+      when(() => mockRemoteDataSource.syncUserProfile(mockUser))
+          .thenAnswer((_) async {});
 
       final result = await authRepository.signUp(
         email: 'test@example.com',
@@ -43,6 +54,7 @@ void main() {
             password: 'password123',
             data: {'display_name': 'Test User'},
           )).called(1);
+      verify(() => mockRemoteDataSource.syncUserProfile(mockUser)).called(1);
     });
 
     test('signUp throws AppException on AuthException', () async {

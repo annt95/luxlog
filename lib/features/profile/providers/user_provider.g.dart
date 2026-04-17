@@ -164,5 +164,26 @@ class _UserProfileProviderElement
   String get username => (origin as UserProfileProvider).username;
 }
 
+String _$currentUserProfileHash() =>
+    r'b93295df8fa5304c5f4cb6e2e4d5cc3ff6f314b2';
+
+/// See also [currentUserProfile].
+@ProviderFor(currentUserProfile)
+final currentUserProfileProvider =
+    AutoDisposeFutureProvider<Map<String, dynamic>>.internal(
+      currentUserProfile,
+      name: r'currentUserProfileProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$currentUserProfileHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef CurrentUserProfileRef =
+    AutoDisposeFutureProviderRef<Map<String, dynamic>>;
+
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

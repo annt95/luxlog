@@ -57,6 +57,25 @@ flutter run
 flutter run -d chrome
 ```
 
+### Required environment variables
+Run with:
+
+```bash
+flutter run \
+  --dart-define=SUPABASE_URL=your_url \
+  --dart-define=SUPABASE_ANON_KEY=your_anon_key
+```
+
+### Database migrations
+Apply Supabase migrations in order:
+
+- `001_initial.sql`
+- `002_tags_categories.sql`
+- `003_schema_hybrid.sql` (renames `users` -> `profiles`, `comments.body` -> `comments.text`, adds `portfolios.blocks`)
+- `004_storage_photos_bucket.sql` (creates public `photos` storage bucket + RLS policies)
+
+Upload flow expects a `photos` storage bucket and authenticated write policies from migration `004`.
+
 ### Run on iOS simulator
 ```bash
 flutter run -d iphone
@@ -86,9 +105,9 @@ lib/
 
 ## Roadmap
 
-- [ ] Supabase auth integration
-- [ ] Real photo upload + CDN
-- [ ] Real EXIF from cloud
+- [x] Supabase auth integration
+- [x] Real photo upload to Supabase Storage
+- [x] Feed/Profile/Explore wired to backend providers
 - [ ] Push notifications (FCM)
 - [ ] PDF portfolio export
 - [ ] Custom portfolio domain

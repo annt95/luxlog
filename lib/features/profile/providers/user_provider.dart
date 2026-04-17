@@ -14,3 +14,9 @@ Future<Map<String, dynamic>> userProfile(UserProfileRef ref, String username) {
   final repository = ref.watch(userRepositoryProvider);
   return repository.fetchProfile(username);
 }
+
+@riverpod
+Future<Map<String, dynamic>> currentUserProfile(CurrentUserProfileRef ref) {
+  final repository = ref.watch(userRepositoryProvider);
+  return repository.fetchCurrentProfile();
+}
