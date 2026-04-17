@@ -73,6 +73,9 @@ Apply Supabase migrations in order:
 - `002_tags_categories.sql`
 - `003_schema_hybrid.sql` (renames `users` -> `profiles`, `comments.body` -> `comments.text`, adds `portfolios.blocks`)
 - `004_storage_photos_bucket.sql` (creates public `photos` storage bucket + RLS policies)
+- `005_film_fields.sql` (adds film metadata + upload metadata fields on `photos`)
+- `006_security_rls.sql` (adds missing RLS policies for photos/comments/likes/follows/portfolio/tags)
+- `007_notifications.sql` (creates notifications table, RLS, and DB triggers for like/comment/follow events)
 
 Upload flow expects a `photos` storage bucket and authenticated write policies from migration `004`.
 
