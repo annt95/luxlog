@@ -38,121 +38,123 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surfaceContainerLowest,
-      body: CustomScrollView(
-        slivers: [
-          // ── Back button appbar ────────────────────────────
-          SliverAppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            pinned: false,
-            floating: true,
-            leading: _GlassBackButton(),
-            actions: [
-              _GlassIconButton(
-                icon: Icons.share_outlined,
-                onTap: () {},
-              ),
-              _GlassIconButton(
-                icon: Icons.more_horiz,
-                onTap: () {},
-              ),
-              const SizedBox(width: 8),
-            ],
-          ),
+      body: ref.watch(photoDetailProvider(widget.photoId)).when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+        error: (err, stack) => Center(
+          child: Text('Failed to load photo', style: AppTextStyles.body),
+        ),
+        data: (photo) {
+          final profile = photo['profiles'] as Map<String, dynamic>?;
+          final username = profile?['username'] as String? ?? 'photographer';
+          final fullName = profile?['full_name'] as String?;
+          final displayName = (fullName != null && fullName.isNotEmpty) ? fullName : username;
+          final avatarUrl = profile?['avatar_url'] as String?;
+          final title = photo['title'] as String? ?? '';
+          final caption = photo['caption'] as String? ?? photo['description'] as String? ?? '';
+          final imageUrl = photo['image_url'] as String? ?? '';
+          final camera = photo['camera'] as String? ?? 'Camera';
+          final focalLength = photo['focal_length'] as String?;
+          final aperture = photo['aperture'] as String?;
+          final iso = photo['iso'] as int?;
 
-          // ── Hero: Full-width photo ────────────────────────
-          SliverToBoxAdapter(
-            child: _HeroPhoto(photoId: widget.photoId),
-          ),
+          final dynamicExif = ExifInfo(
+            camera: camera,
+            lens: photo['lens'] as String?,
+            iso: iso,
+            aperture: aperture,
+            shutterSpeed: photo['shutter_speed'] as String?,
+            focalLength: focalLength != null ? int.tryParse(focalLength.replaceAll(RegExp(r'[^0-9]'), '')) : null,
+            takenAt: null,
+          );
 
-          // ── Photo info card ───────────────────────────────
-          SliverToBoxAdapter(
-            child: Container(
-              color: AppColors.surface,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Photographer + actions
-                  _PhotographerRow(
-                    liked: _liked,
-                    saved: _saved,
-                    likeCount: _likes,
-                    onLike: () => setState(() {
-                      _liked = !_liked;
-                      _likes += _liked ? 1 : -1;
-                    }),
-                    onSave: () => setState(() => _saved = !_saved),
+          return CustomScrollView(
+            slivers: [
+              // ── Back button appbar ────────────────────────────
+              SliverAppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                pinned: false,
+                floating: true,
+                leading: _GlassBackButton(),
+                actions: [
+                  _GlassIconButton(
+                    icon: Icons.share_outlined,
+                    onTap: () {},
                   ),
-
-                  // Title
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                    child: Text(
-                      'The Golden Hour at Santorini',
-                      style: AppTextStyles.sectionHeader,
-                    ).animate().fadeIn(delay: 100.ms),
+                  _GlassIconButton(
+                    icon: Icons.more_horiz,
+                    onTap: () {},
                   ),
+                  const SizedBox(width: 8),
+                ],
+              ),
 
-                  // Description
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                    child: Text(
-                      'Shot during the last 15 minutes of golden hour. '
-                      'The warm light was bouncing off the white buildings, '
-                      'creating this ethereal glow. Used the Sony 35mm GM wide '
-                      'open to get that silky bokeh in the background.',
-                      style: AppTextStyles.body.copyWith(
-                        color: AppColors.onSurfaceVariant,
-                        height: 1.6,
+              // ── Hero: Full-width photo ────────────────────────
+              SliverToBoxAdapter(
+                child: Container(
+                  width: double.infinity,
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.7,
+                    minHeight: 280,
+                  ),
+                  color: AppColors.surfaceContainerLowest,
+                  child: CachedNetworkImage(
+                    imageUrl: imageUrl,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+
+              // ── Photo info card ───────────────────────────────
+              SliverToBoxAdapter(
+                child: Container(
+                  color: AppColors.surface,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Photographer + actions
+                      _PhotographerRow(
+                        displayName: displayName,
+                        username: username,
+                        avatarUrl: avatarUrl,
+                        liked: _liked,
+                        saved: _saved,
+                        likeCount: _likes,
+                        onLike: () => setState(() {
+                          _liked = !_liked;
+                          _likes += _liked ? 1 : -1;
+                        }),
+                        onSave: () => setState(() => _saved = !_saved),
                       ),
-                    ),
-                  ),
 
-                  // Tags section
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                    child: Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: ['goldenhour', 'santorini', 'sony', 'bokeh', 'travel']
-                          .map((tag) => TagChip(
-                                tagName: tag,
-                                onTap: () => context.push('/tag/$tag'),
-                              ))
-                          .toList(),
-                    ),
-                  ),
-
-                  // Divider (tonal, not a line)
-                  Container(
-                    height: 1,
-                    color: AppColors.surfaceContainerHigh,
-                  ),
-
-                  // EXIF section
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.camera_alt_outlined,
-                          size: 16,
-                          color: AppColors.primary,
+                      // Title
+                      if (title.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                          child: Text(
+                            title,
+                            style: AppTextStyles.sectionHeader,
+                          ).animate().fadeIn(delay: 100.ms),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Camera Settings',
-                          style: AppTextStyles.titleMedium.copyWith(
-                            color: AppColors.primary,
+
+                      // Description
+                      if (caption.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                          child: Text(
+                            caption,
+                            style: AppTextStyles.body.copyWith(
+                              color: AppColors.onSurfaceVariant,
+                              height: 1.6,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
 
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                    child: ExifDataGrid(exif: _exif),
+                    child: ExifDataGrid(exif: dynamicExif),
                   ),
 
                   // Divider
@@ -162,7 +164,7 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
                   ),
 
                   // Stats row
-                  _StatsRow(likes: _likes),
+                  _StatsRow(likes: photo['likes_count'] as int? ?? _likes),
 
                   // Comments section
                   _CommentsSection(),
@@ -178,46 +180,16 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
             child: _RelatedPhotos(photoId: widget.photoId),
           ),
         ],
-      ),
+      );
+    }),
     );
   }
 }
-
-// ── Hero Photo ───────────────────────────────────────────────────────────────
-
-class _HeroPhoto extends StatelessWidget {
-  final String photoId;
-  const _HeroPhoto({required this.photoId});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.7,
-        minHeight: 280,
-      ),
-      color: AppColors.surfaceContainerLowest,
-      child: CachedNetworkImage(
-        imageUrl: 'https://picsum.photos/seed/$photoId/1200/800',
-        fit: BoxFit.contain,
-        placeholder: (_, __) => Container(
-          color: AppColors.surfaceContainerHigh,
-          child: const Center(
-            child: CircularProgressIndicator(
-              color: AppColors.primary,
-              strokeWidth: 1.5,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Photographer Row ──────────────────────────────────────────────────────────
 
 class _PhotographerRow extends StatelessWidget {
+  final String displayName;
+  final String username;
+  final String? avatarUrl;
   final bool liked;
   final bool saved;
   final int likeCount;
@@ -225,6 +197,9 @@ class _PhotographerRow extends StatelessWidget {
   final VoidCallback onSave;
 
   const _PhotographerRow({
+    required this.displayName,
+    required this.username,
+    required this.avatarUrl,
     required this.liked,
     required this.saved,
     required this.likeCount,
@@ -239,12 +214,25 @@ class _PhotographerRow extends StatelessWidget {
       child: Row(
         children: [
           // Avatar
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: AppColors.primaryContainer,
-            child: Text(
-              'M',
-              style: AppTextStyles.headline.copyWith(color: AppColors.primary),
+          Container(
+            width: 44,
+            height: 44,
+            padding: const EdgeInsets.all(1.5),
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [AppColors.primary, AppColors.primaryDim],
+              ),
+            ),
+            child: CircleAvatar(
+              backgroundColor: AppColors.primaryContainer,
+              backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl!) : null,
+              child: avatarUrl == null 
+                ? Text(
+                    displayName.isNotEmpty ? displayName[0].toUpperCase() : username.isNotEmpty ? username[0].toUpperCase() : 'U',
+                    style: AppTextStyles.headline.copyWith(color: AppColors.primary),
+                  )
+                : null,
             ),
           ),
           const SizedBox(width: 12),
@@ -252,9 +240,9 @@ class _PhotographerRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Marcus Chen', style: AppTextStyles.titleMedium),
+                Text(displayName, style: AppTextStyles.titleMedium),
                 Text(
-                  '@marcuschen · 14.2k followers',
+                  '@$username',
                   style: AppTextStyles.bodySmall,
                 ),
               ],

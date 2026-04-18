@@ -156,6 +156,7 @@ class _MockPost {
   factory _MockPost.fromRow(Map<String, dynamic> row) {
     final profile = row['profiles'] as Map<String, dynamic>?;
     final username = profile?['username'] as String? ?? 'photographer';
+    final fullName = profile?['full_name'] as String?;
     final title = row['title'] as String? ?? '';
     final caption = row['caption'] as String? ?? row['description'] as String? ?? '';
     final camera = row['camera'] as String? ?? 'Camera';
@@ -167,7 +168,7 @@ class _MockPost {
       id: row['id'] as String? ?? '',
       userId: row['user_id'] as String? ?? '',
       username: username,
-      displayName: username,
+      displayName: (fullName != null && fullName.isNotEmpty) ? fullName : username,
       imageUrl: row['image_url'] as String? ?? '',
       caption: caption.isNotEmpty ? caption : title,
       likes: row['likes_count'] as int? ?? 0,
