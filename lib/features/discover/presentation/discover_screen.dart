@@ -121,10 +121,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                 itemBuilder: (context, i) {
                   final p = photos[i];
                   final profile = p['profiles'] as Map<String, dynamic>?;
+                  final fullName = profile?['full_name'] as String?;
+                  final username = profile?['username'] as String? ?? 'Unknown';
                   return PhotoCard(
                     photoId: p['id'] as String,
                     imageUrl: p['image_url'] as String? ?? '',
-                    photographerName: profile?['username'] as String? ?? 'Unknown',
+                    photographerName: (fullName != null && fullName.isNotEmpty) ? fullName : username,
                     photographerAvatar: profile?['avatar_url'] as String?,
                     title: p['title'] as String?,
                     likes: p['likes_count'] as int? ?? 0,
