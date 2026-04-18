@@ -12,7 +12,7 @@ class PhotoRepository {
     try {
       final response = await _client
           .from('photos')
-          .select('*, profiles(username, avatar_url)')
+          .select('*, profiles!photos_user_id_fkey(username, avatar_url)')
           .order('created_at', ascending: false)
           .range(page * limit, (page + 1) * limit - 1);
       return List<Map<String, dynamic>>.from(response);
@@ -39,7 +39,7 @@ class PhotoRepository {
     try {
       final response = await _client
           .from('photos')
-          .select('*, profiles(username, avatar_url)')
+          .select('*, profiles!photos_user_id_fkey(username, avatar_url)')
           .eq('user_id', userId)
           .order('created_at', ascending: false)
           .range(page * limit, (page + 1) * limit - 1);
@@ -111,7 +111,7 @@ class PhotoRepository {
     try {
       final response = await _client
           .from('photos')
-          .select('*, profiles(username, avatar_url), comments(*, profiles(username, avatar_url))')
+          .select('*, profiles!photos_user_id_fkey(username, avatar_url), comments(*, profiles!comments_user_id_fkey(username, avatar_url))')
           .eq('id', id)
           .single();
       return response;

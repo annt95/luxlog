@@ -13,7 +13,10 @@ class PortfolioRepository {
           .from('portfolios')
           .select('blocks')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
+
+      // No portfolio row exists yet → return empty
+      if (response == null) return [];
 
       if (response['blocks'] is String) {
         return List<Map<String, dynamic>>.from(
@@ -26,7 +29,7 @@ class PortfolioRepository {
       return [];
 
     } on PostgrestException catch (e, stackTrace) {
-      if (e is PostgrestException && e.code == 'PGRST116') {
+      if (e.code == 'PGRST116') {
         // Not found, return empty portfolio
         return [];
       }
