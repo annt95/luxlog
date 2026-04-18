@@ -39,9 +39,6 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   bool _shareGps = false;
   bool _allowDownload = true;
   bool _isFilm = false;
-  String _selectedLicense = 'CC BY 4.0';
-
-  static const _licenses = ['CC BY 4.0', 'CC BY-SA 4.0', 'CC BY-NC 4.0', 'All Rights Reserved'];
 
   static const int _maxFileSizeBytes = 20 * 1024 * 1024; // 20MB
 
@@ -243,7 +240,6 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         fileName: _selectedImage!.name,
         title: _titleCtrl.text.trim(),
         caption: _captionCtrl.text.trim(),
-        license: _selectedLicense,
         allowDownload: _allowDownload,
         isFilm: _isFilm,
         filmStock: _isFilm ? _filmStockCtrl.text.trim() : null,
@@ -365,13 +361,9 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                           },
                           shareGps: _shareGps,
                           allowDownload: _allowDownload,
-                          license: _selectedLicense,
-                          licenses: _licenses,
                           onShareGpsChanged: (v) => setState(() => _shareGps = v),
                           onDownloadChanged: (v) =>
                               setState(() => _allowDownload = v),
-                          onLicenseChanged: (v) =>
-                              setState(() => _selectedLicense = v!),
                           onBack: () => setState(() => _currentStep = 0),
                           onUpload: _upload,
                           isFilm: _isFilm,
@@ -529,11 +521,8 @@ class _DetailsStep extends StatelessWidget {
   final Future<List<String>> Function(String query) onSearchTags;
   final bool shareGps;
   final bool allowDownload;
-  final String license;
-  final List<String> licenses;
   final ValueChanged<bool> onShareGpsChanged;
   final ValueChanged<bool> onDownloadChanged;
-  final ValueChanged<String?> onLicenseChanged;
   final VoidCallback onBack;
   final VoidCallback onUpload;
   final bool isFilm;
@@ -556,11 +545,8 @@ class _DetailsStep extends StatelessWidget {
     required this.onSearchTags,
     required this.shareGps,
     required this.allowDownload,
-    required this.license,
-    required this.licenses,
     required this.onShareGpsChanged,
     required this.onDownloadChanged,
-    required this.onLicenseChanged,
     required this.onBack,
     required this.onUpload,
     required this.isFilm,
@@ -873,32 +859,6 @@ class _DetailsStep extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 16),
-
-                // License
-                _SectionLabel('License'),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: AppColors.outlineVariant),
-                  ),
-                  child: DropdownButton<String>(
-                    value: license,
-                    isExpanded: true,
-                    underline: const SizedBox(),
-                    dropdownColor: AppColors.surfaceContainerHigh,
-                    style: AppTextStyles.body,
-                    items: licenses.map((l) => DropdownMenuItem(
-                      value: l,
-                      child: Text(l),
-                    )).toList(),
-                    onChanged: onLicenseChanged,
-                  ),
-                ),
-
-                const SizedBox(height: 32),
               ],
             ),
           ),

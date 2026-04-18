@@ -19,6 +19,7 @@ class ProfileEditScreen extends ConsumerStatefulWidget {
 
 class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _fullNameCtrl = TextEditingController();
   final _bioCtrl = TextEditingController();
   final _instagramCtrl = TextEditingController();
   final _websiteCtrl = TextEditingController();
@@ -41,6 +42,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     try {
       final profile = await ref.read(currentUserProfileProvider.future);
       setState(() {
+        _fullNameCtrl.text = profile['full_name'] as String? ?? '';
         _bioCtrl.text = profile['bio'] as String? ?? '';
         _currentAvatarUrl = profile['avatar_url'] as String?;
         final links = profile['links'] as Map<String, dynamic>?;
@@ -56,6 +58,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
 
   @override
   void dispose() {
+    _fullNameCtrl.dispose();
     _bioCtrl.dispose();
     _instagramCtrl.dispose();
     _websiteCtrl.dispose();
@@ -120,6 +123,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
 
       // 3. Update profile
       await repo.updateProfile(
+        fullName: _fullNameCtrl.text.trim().isNotEmpty ? _fullNameCtrl.text.trim() : null,
         bio: _bioCtrl.text.trim(),
         avatarUrl: avatarUrl,
         links: links,
@@ -232,6 +236,23 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                 ),
               ),
               const SizedBox(height: 32),
+              
+              // Full Name Field
+              TextFormField(
+                controller: _fullNameCtrl,
+                style: AppTextStyles.body,
+                decoration: InputDecoration(
+                  labelText: 'Display Name',
+                  hintText: 'e.g. John Doe',
+                  filled: true,
+                  fillColor: AppColors.surfaceContainerLow,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
               
               // Bio Field
               TextFormField(

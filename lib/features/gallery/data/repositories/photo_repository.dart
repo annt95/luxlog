@@ -137,7 +137,6 @@ class PhotoRepository {
     required String fileName,
     required String title,
     String? caption,
-    String? license,
     bool allowDownload = true,
     // EXIF (auto-parsed or manual for film)
     bool isFilm = false,
@@ -187,7 +186,6 @@ class PhotoRepository {
         'aperture': aperture,
         'shutter_speed': shutterSpeed,
         'focal_length': focalLength?.toString(),
-        'license': license ?? 'CC BY 4.0',
         'allow_download': allowDownload,
         'is_film': isFilm,
         'film_stock': isFilm ? filmStock : null,

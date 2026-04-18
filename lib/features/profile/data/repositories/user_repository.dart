@@ -81,12 +81,13 @@ class UserRepository {
     }
   }
 
-  Future<void> updateProfile({String? bio, String? avatarUrl, Map<String, dynamic>? links}) async {
+  Future<void> updateProfile({String? fullName, String? bio, String? avatarUrl, Map<String, dynamic>? links}) async {
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
       
       final updates = <String, dynamic>{};
+      if (fullName != null) updates['full_name'] = fullName;
       if (bio != null) updates['bio'] = bio;
       if (avatarUrl != null) updates['avatar_url'] = avatarUrl;
       if (links != null) updates['links'] = links;

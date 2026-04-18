@@ -168,6 +168,7 @@ class _ProfileHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final username = profile['username'] as String? ?? 'user';
+    final fullName = profile['full_name'] as String?;
     final avatarUrl = profile['avatar_url'] as String?;
     final bio = profile['bio'] as String? ?? '';
     final followers = profile['followers'] as List<dynamic>?;
@@ -271,11 +272,26 @@ class _ProfileHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 // Name
-                Text(
-                  '@$username',
-                  style: AppTextStyles.sectionHeader.copyWith(fontSize: 20),
-                ).animate().fadeIn(delay: 100.ms),
-                const SizedBox(height: 4),
+                if (fullName != null && fullName.isNotEmpty) ...[
+                  Text(
+                    fullName,
+                    style: AppTextStyles.sectionHeader.copyWith(fontSize: 22),
+                  ).animate().fadeIn(delay: 50.ms),
+                  Text(
+                    '@$username',
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.primary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ).animate().fadeIn(delay: 100.ms),
+                ] else ...[
+                  Text(
+                    '@$username',
+                    style: AppTextStyles.sectionHeader.copyWith(fontSize: 20),
+                  ).animate().fadeIn(delay: 100.ms),
+                ],
+                const SizedBox(height: 8),
                 // Bio
                 Text(
                   bio.isEmpty
