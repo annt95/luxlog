@@ -65,7 +65,7 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
             iso: iso,
             aperture: aperture,
             shutterSpeed: photo['shutter_speed'] as String?,
-            focalLength: focalLength != null ? int.tryParse(focalLength.replaceAll(RegExp(r'[^0-9]'), '')) : null,
+            focalLength: focalLength != null ? double.tryParse(focalLength.replaceAll(RegExp(r'[^0-9.]'), '')) : null,
             takenAt: null,
           );
 
