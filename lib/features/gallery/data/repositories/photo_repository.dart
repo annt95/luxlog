@@ -161,11 +161,14 @@ class PhotoRepository {
       final ext = fileName.split('.').last.toLowerCase();
       final storagePath = 'uploads/$userId/${DateTime.now().millisecondsSinceEpoch}.$ext';
 
+      // Fix MIME type for .jpg (Supabase expects 'image/jpeg' and rejects 'image/jpg' with 400 Bad Request)
+      final String mimeType = (ext == 'jpg') ? 'image/jpeg' : 'image/$ext';
+
       // 2. Upload to Supabase Storage bucket "photos"
       await _client.storage.from('photos').uploadBinary(
         storagePath,
         fileBytes,
-        fileOptions: FileOptions(contentType: 'image/$ext'),
+        fileOptions: FileOptions(contentType: mimeType),
       );
 
       // 3. Get public URL
