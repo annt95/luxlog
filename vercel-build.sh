@@ -5,7 +5,9 @@ set -euo pipefail
 FLUTTER_CHANNEL="${FLUTTER_CHANNEL:-stable}"
 
 echo "Installing Flutter (${FLUTTER_CHANNEL})..."
-git clone "https://github.com/flutter/flutter.git" -b "${FLUTTER_CHANNEL}" --depth 1 _flutter
+if [ ! -d "_flutter" ]; then
+  git clone "https://github.com/flutter/flutter.git" -b "${FLUTTER_CHANNEL}" --depth 1 _flutter
+fi
 export PATH="$PWD/_flutter/bin:$PATH"
 
 echo "Flutter version (${FLUTTER_CHANNEL}):"
