@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:luxlog/features/auth/providers/auth_provider.dart';
+import 'package:luxlog/features/profile/providers/user_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:luxlog/app/theme.dart';
@@ -65,7 +67,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           // ── Glassmorphism AppBar ─────────────────────────
           SliverPersistentHeader(
             pinned: true,
-            delegate: _GlassAppBarDelegate(),
+            delegate: _GlassAppBarDelegate(ref: ref),
           ),
 
           // ── Filter chips ─────────────────────────────────
@@ -160,8 +162,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
 // ── Glassmorphism AppBar ─────────────────────────────────────────────────────
 
 class _GlassAppBarDelegate extends SliverPersistentHeaderDelegate {
+  final WidgetRef ref;
+  _GlassAppBarDelegate({required this.ref});
+
   @override
-  double get minExtent => 56 + 0;
+  double get minExtent => 56;
   @override
   double get maxExtent => 72;
 
@@ -233,16 +238,30 @@ class _GlassAppBarDelegate extends SliverPersistentHeaderDelegate {
                   // ),
                   // Avatar
                   const SizedBox(width: 4),
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: AppColors.primaryContainer,
-                    child: Text(
-                      'A',
-                      style: AppTextStyles.exifData.copyWith(
-                        color: AppColors.primary,
+                  ref.watch(currentUserProfileProvider).when(
+                        data: (profile) {
+                          final name = profile['full_name'] as String? ?? profile['username'] as String? ?? 'U';
+                          return CircleAvatar(
+                            radius: 16,
+                            backgroundColor: AppColors.primaryContainer,
+                            child: Text(
+                              name[0].toUpperCase(),
+                              style: AppTextStyles.exifData.copyWith(
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          );
+                        },
+                        loading: () => const CircleAvatar(
+                          radius: 16,
+                          backgroundColor: AppColors.surfaceContainerHigh,
+                        ),
+                        error: (_, __) => const CircleAvatar(
+                          radius: 16,
+                          backgroundColor: AppColors.surfaceContainerHigh,
+                          child: Icon(Icons.person, size: 16),
+                        ),
                       ),
-                    ),
-                  ),
                 ],
               ),
             ),

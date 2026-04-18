@@ -457,7 +457,7 @@ class _PostCardState extends State<_PostCard> {
 
           // ── Caption ────────────────────────────────────
           _PostCaption(
-            username: widget.post.username,
+            displayName: widget.post.displayName,
             caption: widget.post.caption,
             timeAgo: widget.post.timeAgo,
           ),
@@ -504,7 +504,7 @@ class _PostHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(post.username, style: AppTextStyles.label),
+                Text(post.displayName, style: AppTextStyles.label),
                 Text(post.timeAgo, style: AppTextStyles.caption),
               ],
             ),
@@ -635,12 +635,12 @@ class _ActionBtn extends StatelessWidget {
 }
 
 class _PostCaption extends StatelessWidget {
-  final String username;
+  final String displayName;
   final String caption;
   final String timeAgo;
 
   const _PostCaption({
-    required this.username,
+    required this.displayName,
     required this.caption,
     required this.timeAgo,
   });
@@ -656,7 +656,7 @@ class _PostCaption extends StatelessWidget {
             text: TextSpan(
               children: [
                 TextSpan(
-                  text: '$username  ',
+                  text: '$displayName  ',
                   style: AppTextStyles.label,
                 ),
                 TextSpan(
