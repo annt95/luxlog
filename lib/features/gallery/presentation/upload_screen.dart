@@ -55,35 +55,55 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: source, imageQuality: 100);
-    if (picked == null) return;
+    try {
+      final picker = ImagePicker();
+      // Removed imageQuality as it can cause Canvas/Memory crashes on Flutter Web for large files
+      final picked = await picker.pickImage(source: source);
+      if (picked == null) return;
 
-    final bytes = await picked.readAsBytes();
+      final bytes = await picked.readAsBytes();
 
-    // File size validation
-    if (bytes.length > _maxFileSizeBytes) {
+      // File size validation
+      if (bytes.length > _maxFileSizeBytes) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Kích thước ảnh vượt quá 20MB. Vui lòng chọn ảnh nhỏ hơn.'),
+              backgroundColor: AppColors.errorContainer,
+            ),
+          );
+        }
+        return;
+      }
+
+      setState(() {
+        _selectedImage = picked;
+        _selectedImageBytes = bytes;
+        _parsedExif = null;
+        _parsingExif = true;
+        _errorMessage = null;
+        _currentStep = 1; // Immediately transition to UI
+      });
+
+      // Start parsing EXIF asynchronously so the main thread allows the UI transition first
+      _parseExifInBackground(bytes);
+      
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('File size exceeds 20MB limit. Please choose a smaller image.'),
+          SnackBar(
+            content: Text('Lỗi không thể đọc ảnh. Vui lòng thử lại.'),
             backgroundColor: AppColors.errorContainer,
           ),
         );
       }
-      return;
     }
+  }
 
-    setState(() {
-      _selectedImage = picked;
-      _selectedImageBytes = bytes;
-      _parsedExif = null;
-      _parsingExif = true;
-      _errorMessage = null;
-    });
-
-    // Parse EXIF
+  Future<void> _parseExifInBackground(Uint8List bytes) async {
     try {
+      // Delay slightly to let the widget tree build the Details Form first
+      await Future.delayed(const Duration(milliseconds: 100));
       final tags = await readExifFromBytes(bytes);
 
       ExifInfo? info;
@@ -103,17 +123,19 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         );
       }
 
-      setState(() {
-        _parsedExif = info;
-        _parsingExif = false;
-        _currentStep = 1;
-      });
+      if (mounted) {
+        setState(() {
+          _parsedExif = info;
+          _parsingExif = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _parsedExif = null;
-        _parsingExif = false;
-        _currentStep = 1;
-      });
+      if (mounted) {
+        setState(() {
+          _parsedExif = null;
+          _parsingExif = false;
+        });
+      }
     }
   }
 
