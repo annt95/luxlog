@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:luxlog/shared/constants/film_suggestions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,7 +41,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   bool _allowDownload = true;
   bool _isFilm = false;
 
-  static const int _maxFileSizeBytes = 20 * 1024 * 1024; // 20MB
+  static const int _maxFileSizeBytes = 50 * 1024 * 1024; // 50MB
 
   @override
   void dispose() {
@@ -65,7 +66,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Kích thước ảnh vượt quá 20MB. Vui lòng chọn ảnh nhỏ hơn.'),
+              content: Text('File size exceeds 50MB. Please choose a smaller image.'),
               backgroundColor: AppColors.errorContainer,
             ),
           );
@@ -814,24 +815,20 @@ class _DetailsStep extends StatelessWidget {
                   const SizedBox(height: 16),
                   _SectionLabel('Film Details'),
                   const SizedBox(height: 12),
-                  TextField(
+                  _FilmAutocomplete(
                     controller: filmCameraCtrl,
-                    style: AppTextStyles.body,
-                    decoration: const InputDecoration(
-                      labelText: 'Film Camera',
-                      hintText: 'e.g. Contax G2',
-                      prefixIcon: Icon(Icons.camera_alt_outlined, size: 18),
-                    ),
+                    suggestions: FilmSuggestions.cameras,
+                    labelText: 'Film Camera',
+                    hintText: 'e.g. Contax G2',
+                    icon: Icons.camera_alt_outlined,
                   ),
                   const SizedBox(height: 12),
-                  TextField(
+                  _FilmAutocomplete(
                     controller: filmStockCtrl,
-                    style: AppTextStyles.body,
-                    decoration: const InputDecoration(
-                      labelText: 'Film Stock',
-                      hintText: 'e.g. Kodak Portra 400',
-                      prefixIcon: Icon(Icons.camera_roll_outlined, size: 18),
-                    ),
+                    suggestions: FilmSuggestions.stocks,
+                    labelText: 'Film Stock',
+                    hintText: 'e.g. Kodak Portra 400',
+                    icon: Icons.camera_roll_outlined,
                   ),
                 ],
 
@@ -1024,3 +1021,121 @@ class _UploadingStep extends StatelessWidget {
     ).animate().fadeIn(duration: 200.ms);
   }
 }
+
+// ── Film Autocomplete Widget ──────────────────────────────────────────────────
+
+/// A text field with typeahead-style autocomplete suggestions.
+///
+/// Users can pick a suggestion or type freely — suggestions are hints,
+/// not restrictions.
+class _FilmAutocomplete extends StatelessWidget {
+  final TextEditingController controller;
+  final List<String> suggestions;
+  final String labelText;
+  final String hintText;
+  final IconData icon;
+
+  const _FilmAutocomplete({
+    required this.controller,
+    required this.suggestions,
+    required this.labelText,
+    required this.hintText,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Autocomplete<String>(
+          optionsBuilder: (textEditingValue) {
+            if (textEditingValue.text.isEmpty) {
+              return const Iterable<String>.empty();
+            }
+            final query = textEditingValue.text.toLowerCase();
+            return suggestions
+                .where((s) => s.toLowerCase().contains(query))
+                .take(6);
+          },
+          fieldViewBuilder:
+              (context, textController, focusNode, onEditingComplete) {
+            // Sync initial value from parent controller
+            if (controller.text.isNotEmpty && textController.text.isEmpty) {
+              textController.text = controller.text;
+            }
+            // Keep parent controller in sync
+            textController.addListener(() {
+              if (controller.text != textController.text) {
+                controller.text = textController.text;
+              }
+            });
+            return TextField(
+              controller: textController,
+              focusNode: focusNode,
+              onEditingComplete: onEditingComplete,
+              style: AppTextStyles.body,
+              decoration: InputDecoration(
+                labelText: labelText,
+                hintText: hintText,
+                prefixIcon: Icon(icon, size: 18),
+              ),
+            );
+          },
+          onSelected: (String selection) {
+            controller.text = selection;
+          },
+          optionsViewBuilder: (context, onSelected, options) {
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 8,
+                color: AppColors.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(4),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: constraints.maxWidth,
+                    maxHeight: 240,
+                  ),
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    itemBuilder: (context, index) {
+                      final option = options.elementAt(index);
+                      return InkWell(
+                        onTap: () => onSelected(option),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            border: index < options.length - 1
+                                ? Border(
+                                    bottom: BorderSide(
+                                      color: AppColors.outlineVariant
+                                          .withValues(alpha: 0.3),
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          child: Text(
+                            option,
+                            style: AppTextStyles.body.copyWith(
+                              color: AppColors.onSurface,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
