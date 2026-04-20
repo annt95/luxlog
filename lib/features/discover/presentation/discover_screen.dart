@@ -10,6 +10,7 @@ import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/shared/widgets/photo_card.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
 import 'package:luxlog/features/tags/providers/category_provider.dart';
+import 'package:shimmer/shimmer.dart';
 
 /// Module 4: Discover Feed — based on Stitch "Luxlog Feed - Desktop/Mobile"
 class DiscoverScreen extends ConsumerStatefulWidget {
@@ -137,8 +138,28 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                 },
               ),
             ),
-            loading: () => const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+            loading: () => SliverPadding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
+              sliver: SliverMasonryGrid.count(
+                crossAxisCount: _crossAxisCount(context),
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childCount: 6,
+                itemBuilder: (context, i) {
+                  final heights = [200.0, 260.0, 180.0, 240.0, 220.0, 280.0];
+                  return Shimmer.fromColors(
+                    baseColor: AppColors.surfaceContainerHigh,
+                    highlightColor: AppColors.surfaceContainerHighest,
+                    child: Container(
+                      height: heights[i % heights.length],
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
             error: (e, _) => SliverFillRemaining(
               child: Center(child: Text('Error loading feed', style: TextStyle(color: AppColors.onSurfaceVariant))),

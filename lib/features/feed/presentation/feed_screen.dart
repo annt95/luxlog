@@ -103,10 +103,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
               ];
             },
             loading: () => <Widget>[
-              const SliverFillRemaining(
-                child: Center(
-                  child: CircularProgressIndicator(color: AppColors.primary),
-                ),
+              SliverFillRemaining(
+                child: SkeletonFeedWidget(),
               ),
             ],
             error: (error, _) => <Widget>[

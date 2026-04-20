@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/shared/widgets/tag_chip.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
@@ -173,12 +174,27 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 ),
               ],
               loading: () => <Widget>[
-                const SliverToBoxAdapter(
-                  child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(20),
-                      child: CircularProgressIndicator(color: AppColors.primary),
-                    ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
+                  sliver: SliverMasonryGrid.count(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 6,
+                    crossAxisSpacing: 6,
+                    childCount: 9,
+                    itemBuilder: (context, i) {
+                      final h = [100.0, 130.0, 110.0, 140.0, 100.0, 120.0, 130.0, 110.0, 150.0];
+                      return Shimmer.fromColors(
+                        baseColor: AppColors.surfaceContainerHigh,
+                        highlightColor: AppColors.surfaceContainerHighest,
+                        child: Container(
+                          height: h[i],
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],

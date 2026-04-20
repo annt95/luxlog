@@ -29,6 +29,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
+  <!-- Preload critical fonts to avoid FOIT during Flutter init -->
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700&family=Inter:wght@400;500&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700&family=Inter:wght@400;500&display=swap"></noscript>
+
   <link rel="canonical" href="https://luxlog.vercel.app" id="luxlog-canonical" />
 
   <!-- Open Graph (fallback, route-level values will be updated in runtime on web) -->
@@ -103,6 +107,66 @@
       font: 500 13px/1.2 -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
     ">Bạn đang offline - một số dữ liệu có thể không khả dụng.</div>
 
+  <!-- Loading splash (visible while Flutter initializes) -->
+  <div id="loading-splash" style="
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0E0E0E;
+      transition: opacity 0.4s ease;
+    ">
+    <style>
+      @keyframes luxlog-pulse {
+        0%, 100% { opacity: 0.4; transform: scale(0.96); }
+        50% { opacity: 1; transform: scale(1); }
+      }
+      @keyframes luxlog-progress {
+        0% { width: 0%; }
+        20% { width: 20%; }
+        50% { width: 45%; }
+        80% { width: 70%; }
+        95% { width: 85%; }
+        100% { width: 100%; }
+      }
+      #loading-splash .logo-text {
+        font: 700 28px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        letter-spacing: 4px;
+        color: #c5a572;
+        text-transform: uppercase;
+        animation: luxlog-pulse 2s ease-in-out infinite;
+      }
+      #loading-splash .tagline {
+        margin-top: 12px;
+        font: 400 13px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        color: rgba(245, 232, 208, 0.6);
+        letter-spacing: 0.5px;
+      }
+      #loading-splash .progress-track {
+        margin-top: 32px;
+        width: 140px;
+        height: 2px;
+        background: rgba(197, 165, 114, 0.15);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      #loading-splash .progress-bar {
+        height: 100%;
+        background: #c5a572;
+        border-radius: 2px;
+        animation: luxlog-progress 4s ease-out forwards;
+      }
+    </style>
+    <div class="logo-text">Luxlog</div>
+    <div class="tagline">Nơi kể lại câu chuyện của ánh sáng</div>
+    <div class="progress-track">
+      <div class="progress-bar" id="splash-progress"></div>
+    </div>
+  </div>
+
   <!-- Vercel Analytics -->
   <script defer src="/_vercel/insights/script.js"></script>
   <script>
@@ -153,15 +217,48 @@
       }
     })();
   </script>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
+  <script>
+    // Custom Flutter bootstrap with loading progress
+    {{flutter_js}}
+    {{flutter_build_config}}
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
-  <script src="flutter_bootstrap.js" async></script>
+    // Safety timeout: if Flutter fails to load in 15s, show retry hint
+    var _splashTimeout = setTimeout(function() {
+      var splash = document.getElementById('loading-splash');
+      if (splash) {
+        var hint = document.createElement('div');
+        hint.style.cssText = 'margin-top:24px;font:400 12px/1.4 -apple-system,sans-serif;color:rgba(245,232,208,0.5);cursor:pointer;';
+        hint.textContent = 'Tải lâu quá? Nhấn để thử lại.';
+        hint.onclick = function() { location.reload(); };
+        splash.appendChild(hint);
+      }
+    }, 15000);
+
+    _flutter.loader.load({
+      onEntrypointLoaded: async function(engineInitializer) {
+        clearTimeout(_splashTimeout);
+        // Engine downloading complete → update progress
+        var bar = document.getElementById('splash-progress');
+        if (bar) bar.style.animation = 'none';
+        if (bar) bar.style.width = '70%';
+
+        var appRunner = await engineInitializer.initializeEngine();
+
+        // Engine initialized → almost done
+        if (bar) bar.style.width = '90%';
+
+        await appRunner.runApp();
+
+        // App running → remove splash
+        if (bar) bar.style.width = '100%';
+        var splash = document.getElementById('loading-splash');
+        if (splash) {
+          splash.style.opacity = '0';
+          setTimeout(function() { splash.remove(); }, 400);
+        }
+      }
+    });
+  </script>
 </body>
 
 </html>

@@ -318,14 +318,14 @@ Migrations `005`, `006`, `007` chưa apply trên DB production. Code sẽ fail n
 - [x] **Image alt text**: `PhotoCard` cần có `semanticLabel` cho ảnh
 
 #### F9.6 — Performance & Core Web Vitals
-- [ ] **Flutter build renderer**: Sử dụng `--web-renderer canvaskit` (mặc định) nhưng thêm loading indicator cho LCP
-- [ ] **Loading skeleton**: Đã có `skeleton_widgets.dart` — verify nó render nhanh < 2.5s (LCP target)
-- [x] **Font optimization**: Preload/Preconnect Google Fonts critical origins
-  ```html
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=..." as="style">
-  ```
+- [x] **Flutter build renderer**: CanvasKit (default) + branded splash screen with progress bar during init
+- [x] **Loading splash**: HTML-native splash (logo + progress bar + tagline) visible immediately, removed on Flutter first frame
+- [x] **Loading skeleton**: Shimmer masonry grid trên DiscoverScreen, ExploreScreen; SkeletonFeedWidget trên FeedScreen
+- [x] **Font optimization**: Preload/Preconnect Google Fonts critical origins + preload Manrope/Inter CSS
 - [x] **Image optimization**: Serve responsive images (Supabase render transform) cho feed/card/detail
 - [x] **Vercel Speed Insights** (đã có) — monitor CWV scores
+- [x] **Cache headers**: Aggressive caching cho .js/.wasm/assets/canvaskit (immutable, 1yr); no-cache cho service worker
+- [x] **Safety timeout**: 15s retry hint nếu Flutter init fail
 - [ ] **Bundle size**: Tree-shake unused packages; defer non-critical JS
 
 #### F9.7 — PWA & Manifest Upgrade
