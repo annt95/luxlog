@@ -1,10 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:luxlog/features/portfolio/presentation/portfolio_editor_screen.dart';
 import 'package:luxlog/features/portfolio/providers/portfolio_provider.dart';
 
 class PublicPortfolioScreen extends ConsumerWidget {

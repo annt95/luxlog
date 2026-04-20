@@ -1,6 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../data/repositories/user_repository.dart';
 import 'user_provider.dart';
 
 part 'follow_state_provider.g.dart';

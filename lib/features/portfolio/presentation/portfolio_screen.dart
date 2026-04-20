@@ -26,10 +26,10 @@ class PortfolioScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
-    // Load portfolio blocks if user is authenticated
-    final portfolioAsync = currentUser != null
-        ? ref.watch(portfolioBlocksProvider(currentUser.id))
-        : null;
+    // Pre-load portfolio blocks if user is authenticated
+    if (currentUser != null) {
+      ref.watch(portfolioBlocksProvider(currentUser.id));
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,

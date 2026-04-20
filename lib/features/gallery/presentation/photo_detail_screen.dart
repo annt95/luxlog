@@ -3,11 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/core/services/image_url_optimizer.dart';
 import 'package:luxlog/shared/widgets/exif_badge.dart';
-import 'package:luxlog/shared/widgets/tag_chip.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
 
 /// Module 1: Photo Detail
@@ -23,17 +21,6 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
   bool _liked = false;
   bool _saved = false;
   int _likes = 2471;
-
-  // Mock EXIF data — replace with real data from Supabase
-  final _exif = const ExifInfo(
-    camera: 'Sony α7 IV',
-    lens: 'FE 35mm f/1.4 GM',
-    iso: 400,
-    aperture: '1.4',
-    shutterSpeed: '1/250s',
-    focalLength: 35,
-    takenAt: null,
-  );
 
   @override
   Widget build(BuildContext context) {
