@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:go_router/go_router.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:luxlog/features/auth/presentation/login_screen.dart';
 import 'package:luxlog/features/auth/presentation/signup_screen.dart';
 import 'package:luxlog/features/discover/presentation/discover_screen.dart';
@@ -22,6 +24,7 @@ import 'package:luxlog/core/services/seo_service.dart';
 final router = GoRouter(
   initialLocation: '/',
   debugLogDiagnostics: false,
+  routerNeglect: true,
   redirect: (context, state) {
     SeoService.applyForPath(
       state.uri.path,

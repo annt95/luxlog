@@ -28,6 +28,10 @@
         }
       ],
       "destination": "/api/seo/user/:username"
+    },
+    {
+      "source": "/((?!api|assets|icons|images|canvaskit|flutter_service_worker\\.js|manifest\\.json|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.js|.*\\.wasm|.*\\.png|.*\\.ico).*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:luxlog/app/router.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/core/services/error_reporter.dart';
@@ -11,6 +12,7 @@ import 'package:luxlog/features/auth/providers/auth_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy();
   ErrorReporter().initialize();
   Object? initError;
   try {
@@ -53,14 +55,21 @@ Future<void> _handleOAuthCodeExchange() async {
     final code = uri.queryParameters['code'];
     if (code != null && code.isNotEmpty) {
       await SupabaseService.client.auth.exchangeCodeForSession(code);
-      // Clean up the URL by removing the ?code= param (cosmetic)
-      // This uses the web-only dart:html API indirectly via Uri manipulation.
-      // The GoRouter will handle the hash fragment routing.
+      // Clean up the URL by removing the ?code= param
+      _cleanUrlCode();
     }
   } catch (e) {
     // Code may have already been exchanged or expired — silently ignore.
     debugPrint('OAuth code exchange failed (may be stale): $e');
   }
+}
+
+/// The GoRouter redirect automatically navigates away from ?code= URLs
+/// to /feed after successful exchange, so the URL bar gets cleaned up
+/// naturally via path-based routing.
+void _cleanUrlCode() {
+  // With usePathUrlStrategy + GoRouter redirect (hasOAuthCode → /feed),
+  // the browser URL is replaced by router navigation. No manual cleanup needed.
 }
 
 class LuxlogApp extends ConsumerWidget {
