@@ -1,6 +1,6 @@
 # Luxlog — Implementation Progress Tracker
 
-## 📅 Cập nhật lần cuối: 2026-04-20 (Phase G Save/Bookmark + Phase H URL Optimization + Phase I Portfolio)
+## 📅 Cập nhật lần cuối: 2026-04-20 (Phase J Production Hardening Audit)
 
 > Tổng hợp tiến độ triển khai dự án Luxlog dựa trên rà soát toàn bộ mã nguồn thực tế,
 > đối chiếu với PLAN.md và WALKTHROUGH.md.
@@ -22,12 +22,15 @@
 | Vercel Deployment | **98%** | Pipeline hoạt động; auto-deploy on push; git clean |
 | Testing | **80%** | 29 test files + 11 E2E specs; coverage + integration in CI |
 | SEO | **90%** | Runtime meta, OG, JSON-LD, sitemap, bot snapshot; pending prod QA gate |
-| Observability | **70%** | ErrorReporter + AppLogger + AnalyticsService + ErrorBoundary wired |
+| Observability | **40%** | AppLogger + AnalyticsService wired BUT no external sink (Sentry/HTTP) |
 | Social Features | **98%** | Navigation, Like, Follow, Comment, Share, Save/Bookmark, Category Filter, Editor's Pick |
 | Accessibility | **75%** | Semantic labels on nav, buttons, photo cards, tooltips on actions |
 | Documentation | **80%** | DATABASE.md, CONTRIBUTING.md, implementation_plan.md |
 | URL Optimization | **100%** | Path-based URLs (no hash), SPA fallback, OAuth code cleanup |
 | Portfolio Feature | **85%** | Editor + Public view + Real data dashboard + Delete/Preview wired |
+| **Performance** | **65%** | Image transforms disabled, no request caching, no retry UI |
+| **Rate Limiting** | **0%** | No client/server rate limiting on API calls |
+| **Error Tracking (Prod)** | **0%** | ErrorReporter logs to console only — no Sentry/HTTP in release |
 
 ---
 
@@ -785,7 +788,270 @@ integration_test/ (1 .dart file)
 
 ---
 
-## 📋 Dependencies (pubspec.yaml)
+## � Phase J — Production Hardening (Audit 2026-04-20)
+
+### Tổng quan Audit
+
+**Mức độ sẵn sàng production: 75/100** — Đủ soft-launch (500 users), chưa đủ public launch.
+
+Audit phát hiện **4 lỗ hổng nghiêm trọng** + **12 điểm yếu** cần xử lý trước khi ra mắt công khai.
+
+---
+
+### J1. 🔴 CRITICAL — Error Tracking (Sentry Integration)
+
+**Vấn đề**: `ErrorReporter` và `AnalyticsService` chỉ log ra console. Trong production (`kReleaseMode`), errors biến mất hoàn toàn — zero visibility.
+
+**File**: `lib/core/services/error_reporter.dart` (line ~44), `lib/core/services/analytics_service.dart` (line ~38) — cả hai có `TODO` comments.
+
+**Tasks**:
+- [ ] Tạo Sentry project (Flutter Web) + lấy DSN
+- [ ] `pubspec.yaml`: thêm `sentry_flutter: ^8.x`
+- [ ] `ErrorReporter.reportError()`: trong `kReleaseMode`, gửi `Sentry.captureException()`
+- [ ] `main.dart`: `SentryFlutter.init()` trước `runApp()`
+- [ ] Breadcrumbs: thêm vào route changes (GoRouter observer)
+- [ ] `AnalyticsService._track()`: gửi event tới Sentry Performance (hoặc Mixpanel)
+- [ ] Test: verify errors appear in Sentry dashboard after deploy
+
+**Impact**: Từ 0% → 90% observability trong production.
+
+---
+
+### J2. 🔴 CRITICAL — Rate Limiting
+
+**Vấn đề**: Không có throttle/debounce trên API calls. User/bot có thể spam likes, follows, comments, uploads liên tục. `_toggleLike()` có thể fire multiple requests < 100ms nếu UI debounce fail.
+
+**Files bị ảnh hưởng**:
+- `lib/features/gallery/data/repositories/photo_repository.dart` — `likePhoto()`, `unlikePhoto()`, `addComment()`, `uploadPhoto()`
+- `lib/features/profile/data/repositories/user_repository.dart` — `followUser()`, `unfollowUser()`
+- `lib/features/portfolio/data/repositories/portfolio_repository.dart` — `savePortfolio()`
+
+**Tasks**:
+- [ ] Tạo utility `rate_limiter.dart` (Dart) — per-action cooldown (1 req/sec per action type)
+- [ ] Wrap `likePhoto`/`unlikePhoto` với `_rateLimiter.guard('like', photoId)`
+- [ ] Wrap `followUser`/`unfollowUser` với `_rateLimiter.guard('follow', targetId)`
+- [ ] Wrap `addComment` với cooldown 3 giây
+- [ ] Supabase: Thêm SQL function rate limit (INSERT check last action timestamp)
+- [ ] Migration `011_rate_limit_functions.sql`
+- [ ] UI: Disable button immediately on tap, re-enable after response/timeout
+
+**Defense layers**: Client-side cooldown → Server-side SQL check → RLS denies repeat within window.
+
+---
+
+### J3. 🔴 CRITICAL — OAuth Error Handling
+
+**Vấn đề**: `_handleOAuthCodeExchange()` trong `main.dart` (line ~47-65) swallow TẤT CẢ errors với `debugPrint()`. Nếu Google OAuth trả error thực (invalid redirect URI, malformed state), app tiếp tục silently.
+
+**Code hiện tại**:
+```dart
+} catch (e) {
+  debugPrint('OAuth code exchange failed (may be stale): $e');
+}
+```
+
+**Tasks**:
+- [ ] Phân biệt "already exchanged / expired code" (AuthException with specific message) vs real auth error
+- [ ] Real auth errors → `ErrorReporter.reportError()` + hiển thị SnackBar cho user
+- [ ] Log OAuth state parameter để trace flow
+- [ ] Test: simulate invalid code, verify error logged + user notified
+
+---
+
+### J4. 🔴 CRITICAL — Image Performance (Transforms)
+
+**Vấn đề**: `_imageTransformsEnabled = false` trong `image_url_optimizer.dart`. Tất cả ảnh served ở full resolution — tải 2MB+ cho thumbnail 300x300px.
+
+**Impact**: Gallery load chậm 10x so với mức cần thiết, tốn bandwidth Vercel, UX tệ trên 3G.
+
+**Tasks**:
+- [ ] Upgrade Supabase lên Pro plan (enable image transforms)
+- [ ] Set `_imageTransformsEnabled = true`
+- [ ] Update `getOptimizedUrl()` để dùng `/render/image/` endpoint với `width`, `height`, `quality`
+- [ ] Thumbnail grid: `width=400, quality=75`
+- [ ] Photo detail: `width=1200, quality=85`
+- [ ] Portfolio cover: `width=800, quality=80`
+- [ ] Test: verify transformed URLs load correctly + size reduction
+
+---
+
+### J5. 🟡 HIGH — Connection Error Retry UI
+
+**Vấn đề**: Network errors hiển thị text tĩnh "Failed to load photo" không có nút retry. User phải reload page.
+
+**Files**: Tất cả screens dùng `AsyncValue.when(error: ...)` — chỉ return `Text()` widget.
+
+**Tasks**:
+- [ ] Tạo `lib/shared/widgets/error_retry_widget.dart` — Icon + message + "Try Again" button
+- [ ] Replace tất cả `error: (e, _) => Center(child: Text(...))` bằng `ErrorRetryWidget(onRetry: () => ref.invalidate(...))`
+- [ ] Screens affected: photo_detail, feed, discover, explore, portfolio, notifications, profile
+- [ ] Thêm exponential backoff (1s → 2s → 4s → max 30s) cho auto-retry
+- [ ] Show offline indicator khi `ConnectivityResult.none`
+
+---
+
+### J6. 🟡 HIGH — Storage Cleanup (Avatar + Deleted Photos)
+
+**Vấn đề**: Khi user update avatar, file cũ trong Supabase Storage không bị xóa → tích lũy dần qua thời gian.
+
+**Tasks**:
+- [ ] `profile_edit_screen.dart`: Sau khi upload avatar mới thành công, xóa file cũ via `supabase.storage.from('avatars').remove([oldPath])`
+- [ ] `photo_repository.dart`: `deletePhoto()` phải xóa file trong Storage trước DELETE row
+- [ ] Tạo cron job (Supabase Edge Function hoặc GitHub Action) chạy weekly: scan orphan files
+- [ ] Test: verify old avatar removed after update
+
+---
+
+### J7. 🟡 HIGH — Search State Persistence
+
+**Vấn đề**: Search query biến mất khi navigate back. User phải gõ lại.
+
+**Tasks**:
+- [ ] Store search query trong GoRouter `queryParameters`: `/explore?q=hanoi`
+- [ ] `explore_screen.dart`: Read `GoRouterState.queryParameters['q']` on init
+- [ ] Update URL khi user types (debounced 500ms)
+- [ ] Browser back/forward preserves search state naturally
+
+---
+
+### J8. 🟡 MEDIUM — Build Cache Optimization
+
+**Vấn đề**: `vercel-build.sh` clone Flutter repo (~30-45s) mỗi build. Vercel hỗ trợ caching nhưng chưa cấu hình.
+
+**Tasks**:
+- [ ] Thêm `framework` field trong `vercel.json` để enable build cache
+- [ ] Hoặc: chuyển sang Docker approach với prebuilt Flutter image
+- [ ] Hoặc: dùng `@anthropic/vercel-flutter-build` buildpack (nếu available)
+- [ ] Target: build time < 120s (hiện ~180s)
+
+---
+
+### J9. 🟡 MEDIUM — Comment XSS Prevention
+
+**Vấn đề**: Comment text render trực tiếp không qua sanitization. Flutter Web thấp risk hơn HTML thuần nhưng nếu text export ra ngoài (email notifications, SEO render) thì có thể bị XSS.
+
+**Tasks**:
+- [ ] `addComment()`: strip HTML tags trước INSERT (`content.replaceAll(RegExp(r'<[^>]*>'), '')`)
+- [ ] `comment_bottom_sheet.dart`: Verify rendering uses `Text()` widget (not `Html()`)
+- [ ] SEO bot render (`api/seo/photo/[photoId].js`): Escape comment text with `escapeHtml()`
+- [ ] Migration: `UPDATE comments SET text = regexp_replace(text, '<[^>]*>', '', 'g')` — clean existing data
+
+---
+
+### J10. 🟡 MEDIUM — Upload Timeout + Progress
+
+**Vấn đề**: `uploadBinary()` không có timeout. File lớn (50MB) trên mạng chậm có thể treo vô thời hạn.
+
+**Tasks**:
+- [ ] Thêm `.timeout(Duration(minutes: 5))` vào `supabase.storage.uploadBinary()`
+- [ ] Hiển thị progress indicator (Supabase SDK hỗ trợ `onUploadProgress` callback)
+- [ ] Thêm Cancel button khi upload đang chạy
+- [ ] Timeout → hiện retry dialog
+
+---
+
+### J11. 🟡 MEDIUM — Observability Correlation IDs
+
+**Vấn đề**: Mỗi error log độc lập — không thể trace user flow khi bug xảy ra qua nhiều bước.
+
+**Tasks**:
+- [ ] Tạo `session_id` UUID random khi app start
+- [ ] Truyền `sessionId` vào mọi `ErrorReporter.reportError()` call
+- [ ] Attach `sessionId` vào Sentry context (breadcrumbs)
+- [ ] Log route changes với sessionId để reconstruct user journey
+
+---
+
+### J12. 🟡 MEDIUM — Safari E2E + Mobile Testing
+
+**Vấn đề**: E2E tests chỉ chạy Chromium. Safari/mobile có thể có CSS/WASM compatibility issues.
+
+**Tasks**:
+- [ ] `playwright.config.ts`: Thêm WebKit (Safari) project
+- [ ] Conditional skip cho known WASM limitations trên Safari < 16
+- [ ] Thêm mobile viewport tests (iPhone 14 Pro, Galaxy S23)
+- [ ] GitHub Actions: install webkit deps
+
+---
+
+### J13. 🟢 LOW — Portfolio Version History
+
+**Vấn đề**: Không có "draft" vs "published" timestamp hoặc version history. User không thể rollback.
+
+**Tasks**:
+- [ ] Migration: ADD COLUMN `published_at TIMESTAMPTZ`, `version INT DEFAULT 1` to `portfolios`
+- [ ] Khi user clicks "Publish": set `published_at = NOW()`, increment `version`
+- [ ] UI: Show "Last published: 3h ago" badge
+- [ ] Future: Store version snapshots in separate table for restore
+
+---
+
+### J14. 🟢 LOW — Secrets Rotation Policy
+
+**Tasks**:
+- [ ] Document rotation process in `CONTRIBUTING.md`
+- [ ] Set calendar reminder quarterly: rotate `SUPABASE_ANON_KEY`
+- [ ] Monitor for leaked keys (GitHub secret scanning enabled)
+
+---
+
+### J15. 🟢 LOW — Analytics Timing
+
+**Vấn đề**: `AnalyticsService` chỉ track events, không track duration (signup mất bao lâu, page load time).
+
+**Tasks**:
+- [ ] Thêm `Stopwatch` wrapper: `analytics.startTimer('signup')` → `analytics.endTimer('signup')`
+- [ ] Track: page_load_time, signup_duration, upload_duration, search_response_time
+- [ ] Feed timing data vào Sentry Performance transactions
+
+---
+
+### 📊 Phase J Priority Matrix
+
+| # | Task | Severity | Effort | Impact | Recommended Order |
+|:---:|:---|:---:|:---:|:---:|:---:|
+| J1 | Sentry integration | 🔴 | 2h | Visibility | **1st** |
+| J3 | OAuth error fix | 🔴 | 1h | Security | **2nd** |
+| J2 | Rate limiting | 🔴 | 3h | Abuse prevention | **3rd** |
+| J4 | Image transforms | 🔴 | 1h (+$$) | 10x perf | **4th** |
+| J5 | Retry UI | 🟡 | 2h | UX | 5th |
+| J9 | Comment XSS | 🟡 | 1h | Security | 6th |
+| J6 | Storage cleanup | 🟡 | 1h | Cost | 7th |
+| J7 | Search persistence | 🟡 | 1h | UX | 8th |
+| J10 | Upload timeout | 🟡 | 1h | Reliability | 9th |
+| J8 | Build cache | 🟡 | 1h | DX | 10th |
+| J11 | Correlation IDs | 🟡 | 1h | Debug | 11th |
+| J12 | Safari E2E | 🟡 | 1h | Coverage | 12th |
+| J13 | Portfolio versions | 🟢 | 2h | Feature | 13th |
+| J14 | Secrets rotation | 🟢 | 0.5h | Ops | 14th |
+| J15 | Analytics timing | 🟢 | 1h | Insights | 15th |
+
+---
+
+### 🚀 Recommended Launch Path
+
+```
+Week 1: J1 + J3 + J2 → Deploy to staging (error tracking + security fixes)
+Week 2: J4 + J5 + J9 → Performance + UX polish
+Week 3: J6-J12 → Medium priority hardening
+Week 4: Load test (target 100 concurrent) → Public launch
+```
+
+**Soft launch criteria (500 beta users)**:
+- [x] Core features working (auth, upload, feed, social)
+- [ ] J1 done (Sentry — can see errors)
+- [ ] J3 done (OAuth not swallowing real errors)
+- [ ] Apply migrations 009 + 010 on production
+
+**Public launch criteria**:
+- [ ] All 🔴 CRITICAL (J1-J4) resolved
+- [ ] All 🟡 HIGH (J5-J7) resolved
+- [ ] Load test passes 100 concurrent users
+- [ ] Safari E2E green
+
+---
+
+## �📋 Dependencies (pubspec.yaml)
 
 | Category | Package | Version |
 |----------|---------|---------|
