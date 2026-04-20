@@ -354,7 +354,6 @@ class _PhotographerRow extends StatelessWidget {
               child: Text(following ? 'Following' : 'Follow'),
             ),
           ),
-          ),
           const SizedBox(width: 8),
           // Like
           _ActionButton(

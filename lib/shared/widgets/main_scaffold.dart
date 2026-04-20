@@ -234,32 +234,33 @@ class _UploadFab extends StatelessWidget {
       child: Tooltip(
         message: 'Upload photo',
         child: GestureDetector(
-      onTap: () => context.push('/upload'),
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFE2C19B), Color(0xFFD3B38E)],
-          ),
-          borderRadius: BorderRadius.circular(6),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFE2C19B).withValues(alpha: 0.3),
-              blurRadius: 20,
-              spreadRadius: 0,
-              offset: const Offset(0, 6),
+          onTap: () => context.push('/upload'),
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFE2C19B), Color(0xFFD3B38E)],
+              ),
+              borderRadius: BorderRadius.circular(6),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFE2C19B).withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
-          ],
+            child: const Icon(
+              Icons.add,
+              color: Color(0xFF412C11), // onPrimary
+              size: 26,
+            ),
+          ),
         ),
-        child: const Icon(
-          Icons.add,
-          color: Color(0xFF412C11), // onPrimary
-          size: 26,
-        ),
-      ),
       ),
     );
   }

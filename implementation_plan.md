@@ -187,11 +187,9 @@ flutter analyze && flutter test && flutter build web --release
 ~~Tất cả code mới (notifications, profile edit, error hardening, CSP fix, migrations reorder) nằm trong working tree. Cần commit + push.~~
 > **Đã commit & push** — Working tree clean, `origin/main` up to date (commit `cd7c96d`).
 
-### B3. Supabase Migrations (Production)
-Migrations `005`, `006`, `007` chưa apply trên DB production. Code sẽ fail nếu deploy mà chưa chạy:
-- `005_film_fields.sql` — film columns
-- `006_security_rls.sql` — RLS policies
-- `007_notifications.sql` — notifications table + triggers
+### B3. Supabase Migrations (Production) ✅ DONE
+~~Migrations `005`, `006`, `007`, `008` chưa apply trên DB production.~~
+> **Đã apply** — All 4 migrations run successfully on production (2026-04-20).
 
 ---
 
@@ -202,12 +200,13 @@ Migrations `005`, `006`, `007` chưa apply trên DB production. Code sẽ fail n
 - [x] Commit với structure phù hợp
 - [x] Push to remote — `cd7c96d` on `origin/main`
 
-### F2. Apply Migrations on Production Supabase
-- [ ] Run `005_film_fields.sql`
-- [ ] Run `006_security_rls.sql`
-- [ ] Run `007_notifications.sql`
+### F2. Apply Migrations on Production Supabase ✅ DONE
+- [x] Run `005_film_fields.sql`
+- [x] Run `006_security_rls.sql` (idempotent with DROP IF EXISTS)
+- [x] Run `007_notifications.sql`
+- [x] Run `008_likes_count_trigger.sql`
 - [ ] Verify triggers active: `on_like_created_notify`, `on_comment_created_notify`, `on_follow_created_notify`
-- [ ] Manual test: insert like → verify notification row appears
+- [ ] Manual test: insert like → verify notification row appears + likes_count increments
 
 ### ~~F3. Explore Screen — Collections/Gear Tabs~~ ✅ DONE
 - [x] Decision: Remove Collections/Gear tabs for v1 (no backend tables needed)
