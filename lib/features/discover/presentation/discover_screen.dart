@@ -134,6 +134,9 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                     title: p['title'] as String?,
                     likes: p['likes_count'] as int? ?? 0,
                     aspectRatio: (p['aspect_ratio'] as num?)?.toDouble() ?? 1.0,
+                    camera: p['camera'] as String? ?? p['film_camera'] as String?,
+                    filmStock: p['film_stock'] as String?,
+                    lens: p['lens'] as String?,
                   );
                 },
               ),

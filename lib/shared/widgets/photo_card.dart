@@ -15,6 +15,10 @@ class PhotoCard extends StatefulWidget {
   final bool isLiked;
   final double? aspectRatio;
   final VoidCallback? onLike;
+  // EXIF / Film metadata
+  final String? camera;
+  final String? filmStock;
+  final String? lens;
 
   const PhotoCard({
     super.key,
@@ -27,6 +31,9 @@ class PhotoCard extends StatefulWidget {
     this.isLiked = false,
     this.aspectRatio,
     this.onLike,
+    this.camera,
+    this.filmStock,
+    this.lens,
   });
 
   @override
@@ -51,6 +58,19 @@ class _PhotoCardState extends State<PhotoCard> {
       _likeCount += _liked ? 1 : -1;
     });
     widget.onLike?.call();
+  }
+
+  String? get _exifSummary {
+    final parts = <String>[];
+    if (widget.filmStock != null && widget.filmStock!.isNotEmpty) {
+      parts.add(widget.filmStock!);
+    }
+    if (widget.camera != null && widget.camera!.isNotEmpty) {
+      parts.add(widget.camera!);
+    } else if (widget.lens != null && widget.lens!.isNotEmpty) {
+      parts.add(widget.lens!);
+    }
+    return parts.isEmpty ? null : parts.join(' · ');
   }
 
   @override
@@ -188,6 +208,18 @@ class _PhotoCardState extends State<PhotoCard> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
+                            if (_exifSummary != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 3),
+                                child: Text(
+                                  _exifSummary!,
+                                  style: AppTextStyles.exifLabel.copyWith(
+                                    color: AppColors.primary.withValues(alpha: 0.8),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                           ],
                         ),
                       ),
