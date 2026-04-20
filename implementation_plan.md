@@ -1,6 +1,6 @@
 # Luxlog — Implementation Progress Tracker
 
-## 📅 Cập nhật lần cuối: 2026-04-20
+## 📅 Cập nhật lần cuối: 2026-04-21
 
 > Tổng hợp tiến độ triển khai dự án Luxlog dựa trên rà soát toàn bộ mã nguồn thực tế,
 > đối chiếu với PLAN.md và WALKTHROUGH.md.
@@ -14,7 +14,7 @@
 | Core Infrastructure | **100%** | Env, Supabase, Errors, Models |
 | Data Layer (Repositories) | **100%** | 8 repos: Auth, AuthRemote, Photo, Portfolio, User, Tag, Category, Notification |
 | Auth System | **100%** | Email + Google OAuth + guards + password reset |
-| Frontend UI | **98%** | Tất cả màn hình chính + Profile Edit |
+| Frontend UI | **98%** | Tất cả màn hình chính + Profile Edit + Homepage uniform grid |
 | UI ↔ Data Wiring | **95%** | Explore còn Collections/Gear tab mock; còn lại đã real |
 | Router & Guards | **100%** | 15 routes; protected: upload, notifications, profile/edit |
 | Notification System | **100%** | Realtime stream + badge + mark-read + triggers backend |
@@ -378,6 +378,7 @@ jobs:
 - [ ] No flaky tests (retry 2x policy for E2E, 0 retries for unit)
 
 ### F6. UI Polish
+- [x] **Homepage uniform grid**: Replaced `SliverMasonryGrid` with `SliverGrid` (fixed `childAspectRatio: 0.72`, portrait 3:4 cards). Removed per-card `aspectRatio` dependency. Cards now fill grid cells via `Expanded`, consistent spacing 12px, `borderRadius: 8`, subtle hover shadow.
 - [ ] Infinite scroll pagination (Feed, Discover, Explore)
 - [ ] Tablet layout (2-column feed) + Web layout (3-column with sidebar)
 - [ ] Dark/Light theme toggle (hiện chỉ có dark)

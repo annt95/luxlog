@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/features/profile/providers/user_provider.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/shared/widgets/photo_card.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
@@ -110,56 +109,63 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
             ),
           ),
 
-          // ── Masonry Grid ──────────────────────────────────
+          // ── Photo Grid (Uniform) ─────────────────────────────
           feedAsync.when(
             data: (photos) => SliverPadding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
-              sliver: SliverMasonryGrid.count(
-                crossAxisCount: _crossAxisCount(context),
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                childCount: photos.length,
-                itemBuilder: (context, i) {
-                  final p = photos[i];
-                  final profile = p['profiles'] as Map<String, dynamic>?;
-                  final fullName = profile?['full_name'] as String?;
-                  final username = profile?['username'] as String? ?? 'Unknown';
-                  return PhotoCard(
-                    photoId: p['id'] as String,
-                    imageUrl: p['image_url'] as String? ?? '',
-                    photographerName: (fullName != null && fullName.isNotEmpty) ? fullName : username,
-                    photographerAvatar: profile?['avatar_url'] as String?,
-                    title: p['title'] as String?,
-                    likes: p['likes_count'] as int? ?? 0,
-                    aspectRatio: (p['aspect_ratio'] as num?)?.toDouble() ?? 1.0,
-                    camera: p['camera'] as String? ?? p['film_camera'] as String?,
-                    filmStock: p['film_stock'] as String?,
-                    lens: p['lens'] as String?,
-                  );
-                },
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: _crossAxisCount(context),
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.72, // 3:4 portrait cards
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, i) {
+                    final p = photos[i];
+                    final profile = p['profiles'] as Map<String, dynamic>?;
+                    final fullName = profile?['full_name'] as String?;
+                    final username = profile?['username'] as String? ?? 'Unknown';
+                    return PhotoCard(
+                      photoId: p['id'] as String,
+                      imageUrl: p['image_url'] as String? ?? '',
+                      photographerName: (fullName != null && fullName.isNotEmpty) ? fullName : username,
+                      photographerAvatar: profile?['avatar_url'] as String?,
+                      title: p['title'] as String?,
+                      likes: p['likes_count'] as int? ?? 0,
+                      camera: p['camera'] as String? ?? p['film_camera'] as String?,
+                      filmStock: p['film_stock'] as String?,
+                      lens: p['lens'] as String?,
+                    );
+                  },
+                  childCount: photos.length,
+                ),
               ),
             ),
             loading: () => SliverPadding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
-              sliver: SliverMasonryGrid.count(
-                crossAxisCount: _crossAxisCount(context),
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                childCount: 6,
-                itemBuilder: (context, i) {
-                  final heights = [200.0, 260.0, 180.0, 240.0, 220.0, 280.0];
-                  return Shimmer.fromColors(
-                    baseColor: AppColors.surfaceContainerHigh,
-                    highlightColor: AppColors.surfaceContainerHighest,
-                    child: Container(
-                      height: heights[i % heights.length],
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: _crossAxisCount(context),
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.72,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, i) {
+                    return Shimmer.fromColors(
+                      baseColor: AppColors.surfaceContainerHigh,
+                      highlightColor: AppColors.surfaceContainerHighest,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                  childCount: 6,
+                ),
               ),
             ),
             error: (e, _) => SliverFillRemaining(

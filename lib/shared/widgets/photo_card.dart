@@ -13,7 +13,6 @@ class PhotoCard extends StatefulWidget {
   final String? title;
   final int likes;
   final bool isLiked;
-  final double? aspectRatio;
   final VoidCallback? onLike;
   // EXIF / Film metadata
   final String? camera;
@@ -29,7 +28,6 @@ class PhotoCard extends StatefulWidget {
     this.title,
     required this.likes,
     this.isLiked = false,
-    this.aspectRatio,
     this.onLike,
     this.camera,
     this.filmStock,
@@ -93,27 +91,33 @@ class _PhotoCardState extends State<PhotoCard> {
           image: true,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            transform: Matrix4.identity()
-              ..scale(_isHovered ? 1.02 : 1.0),
             decoration: BoxDecoration(
               color: AppColors.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: _isHovered
-                    ? AppColors.primary.withValues(alpha: 0.3)
-                    : AppColors.outlineVariant.withValues(alpha: 0.15),
+                    ? AppColors.primary.withValues(alpha: 0.4)
+                    : AppColors.outlineVariant.withValues(alpha: 0.12),
                 width: 1,
               ),
+              boxShadow: _isHovered
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(8),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisSize: MainAxisSize.max,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                 // ── Image ─────────────────────────────────
-                AspectRatio(
-                  aspectRatio: widget.aspectRatio ?? 4 / 3,
+                Expanded(
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -171,12 +175,12 @@ class _PhotoCardState extends State<PhotoCard> {
 
                 // ── Info row ──────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   child: Row(
                     children: [
                       // Photographer avatar
                       CircleAvatar(
-                        radius: 14,
+                        radius: 13,
                         backgroundColor: AppColors.surfaceContainerHigh,
                         backgroundImage: widget.photographerAvatar != null
                             ? CachedNetworkImageProvider(
