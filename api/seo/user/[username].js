@@ -6,10 +6,10 @@ module.exports = async (req, res) => {
 
   let title = `${normalizedUsername}'s Profile | Luxlog`;
   let description = `Portfolio va anh cong khai cua @${normalizedUsername} tren Luxlog.`;
-  let ogImage = 'https://luxlog.vercel.app/icons/Icon-512.png';
+  let ogImage = 'https://luxlog.vercel.app/images/og-default.svg';
 
   const rows = await supabaseSelect(
-    `profiles?select=username,bio,avatar_url&username=eq.${encodeURIComponent(normalizedUsername)}&limit=1`,
+    `profiles?select=username,bio,avatar_url,website&username=eq.${encodeURIComponent(normalizedUsername)}&limit=1`,
   );
   const profile = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
 
@@ -29,6 +29,7 @@ module.exports = async (req, res) => {
       url: `https://luxlog.vercel.app${canonicalPath}`,
       image: ogImage,
       description,
+      sameAs: profile?.website ? [profile.website] : [],
     },
   };
 
@@ -38,6 +39,7 @@ module.exports = async (req, res) => {
     canonicalPath,
     ogImage,
     jsonLd,
+    ogType: 'profile',
     heading: title.replace(' | Luxlog', ''),
     bodyText: description,
   });

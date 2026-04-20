@@ -6,10 +6,13 @@ module.exports = async (req, res) => {
 
   let title = `Photo ${normalizedPhotoId} | Luxlog`;
   let description = 'Chi tiet anh chup tren Luxlog: metadata, film stock, camera, comments.';
-  let ogImage = 'https://luxlog.vercel.app/icons/Icon-512.png';
+  let ogImage = 'https://luxlog.vercel.app/images/og-default.svg';
+  let authorName = 'Luxlog Photographer';
+  let datePublished = null;
+  let license = 'CC BY 4.0';
 
   const rows = await supabaseSelect(
-    `photos?select=id,title,caption,image_url,created_at,is_public,user_id&id=eq.${encodeURIComponent(
+    `photos?select=id,title,caption,image_url,created_at,is_public,user_id,license&id=eq.${encodeURIComponent(
       normalizedPhotoId,
     )}&is_public=eq.true&limit=1`,
   );
@@ -21,6 +24,18 @@ module.exports = async (req, res) => {
     title = `${photoTitle} | Luxlog`;
     description = photo.caption || 'Analog photo published on Luxlog.';
     ogImage = photo.image_url || ogImage;
+    datePublished = photo.created_at || null;
+    license = photo.license || license;
+
+    if (photo.user_id) {
+      const profileRows = await supabaseSelect(
+        `profiles?select=username&id=eq.${encodeURIComponent(photo.user_id)}&limit=1`,
+      );
+      const profile = Array.isArray(profileRows) && profileRows.length > 0 ? profileRows[0] : null;
+      if (profile?.username) {
+        authorName = profile.username;
+      }
+    }
   }
 
   const canonicalPath = `/photo/${encodeURIComponent(normalizedPhotoId)}`;
@@ -28,8 +43,14 @@ module.exports = async (req, res) => {
     '@context': 'https://schema.org',
     '@type': 'ImageObject',
     name: title.replace(' | Luxlog', ''),
+    author: {
+      '@type': 'Person',
+      name: authorName,
+    },
+    datePublished,
     description,
     contentUrl: ogImage,
+    license,
     url: `https://luxlog.vercel.app${canonicalPath}`,
   };
 

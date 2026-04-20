@@ -185,9 +185,12 @@ final router = GoRouter(
   errorBuilder: (context, state) => Scaffold(
     backgroundColor: const Color(0xFF0E0E0E),
     body: Center(
-      child: Text(
-        'Page not found',
-        style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+      child: Semantics(
+        header: true,
+        child: Text(
+          'Page not found',
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+        ),
       ),
     ),
   ),

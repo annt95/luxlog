@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/core/services/image_url_optimizer.dart';
 import 'package:luxlog/features/gallery/presentation/widgets/comment_bottom_sheet.dart';
 import 'package:luxlog/shared/widgets/skeleton_widgets.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
@@ -413,6 +414,12 @@ class _PostCardState extends State<_PostCard> {
 
   @override
   Widget build(BuildContext context) {
+    final optimizedImageUrl = optimizeImageUrl(
+      widget.post.imageUrl,
+      width: 1400,
+      quality: 76,
+    );
+
     return Container(
       color: AppColors.surface,
       child: Column(
@@ -427,7 +434,7 @@ class _PostCardState extends State<_PostCard> {
             child: AspectRatio(
               aspectRatio: widget.post.aspect,
               child: CachedNetworkImage(
-                imageUrl: widget.post.imageUrl,
+                imageUrl: optimizedImageUrl,
                 fit: BoxFit.cover,
                 placeholder: (_, __) => Container(
                   color: AppColors.surfaceContainerHigh,

@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/core/services/image_url_optimizer.dart';
 
 class PhotoCard extends StatefulWidget {
   final String photoId;
@@ -54,30 +55,41 @@ class _PhotoCardState extends State<PhotoCard> {
 
   @override
   Widget build(BuildContext context) {
+    final optimizedImageUrl = optimizeImageUrl(
+      widget.imageUrl,
+      width: 1200,
+      quality: 76,
+    );
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
         onTap: () => context.push('/photo/${widget.photoId}'),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          transform: Matrix4.identity()
-            ..scale(_isHovered ? 1.02 : 1.0),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-              color: _isHovered
-                  ? AppColors.primary.withValues(alpha: 0.3)
-                  : AppColors.outlineVariant.withValues(alpha: 0.15),
-              width: 1,
+        child: Semantics(
+          label:
+              'Photo by ${widget.photographerName}${widget.title != null ? ', ${widget.title}' : ''}',
+          hint: 'Tap to open photo details',
+          image: true,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            transform: Matrix4.identity()
+              ..scale(_isHovered ? 1.02 : 1.0),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: _isHovered
+                    ? AppColors.primary.withValues(alpha: 0.3)
+                    : AppColors.outlineVariant.withValues(alpha: 0.15),
+                width: 1,
+              ),
             ),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 // ── Image ─────────────────────────────────
                 AspectRatio(
                   aspectRatio: widget.aspectRatio ?? 4 / 3,
@@ -85,7 +97,7 @@ class _PhotoCardState extends State<PhotoCard> {
                     fit: StackFit.expand,
                     children: [
                       CachedNetworkImage(
-                        imageUrl: widget.imageUrl,
+                        imageUrl: optimizedImageUrl,
                         fit: BoxFit.cover,
                         placeholder: (_, __) => Container(
                           color: AppColors.surfaceContainerHigh,
@@ -125,6 +137,8 @@ class _PhotoCardState extends State<PhotoCard> {
                                     ? AppColors.error
                                     : Colors.white.withValues(alpha: 0.8),
                                 onTap: _toggleLike,
+                                isLiked: _liked,
+                                likeCount: _likeCount,
                               ),
                             ),
                           ),
@@ -196,7 +210,8 @@ class _PhotoCardState extends State<PhotoCard> {
                     ],
                   ),
                 ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -214,29 +229,39 @@ class _GlassActionButton extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final bool isLiked;
+  final int likeCount;
 
   const _GlassActionButton({
     required this.icon,
     required this.color,
     required this.onTap,
+    required this.isLiked,
+    required this.likeCount,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.1),
-            width: 1,
+    return Semantics(
+      button: true,
+      label: isLiked
+          ? 'Unlike photo, current likes $likeCount'
+          : 'Like photo, current likes $likeCount',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.1),
+              width: 1,
+            ),
           ),
+          child: Icon(icon, color: color, size: 18),
         ),
-        child: Icon(icon, color: color, size: 18),
       ),
     );
   }

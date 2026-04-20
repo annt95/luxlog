@@ -14,7 +14,7 @@ class SeoMeta {
     required this.description,
     required this.canonicalUrl,
     this.ogType = 'website',
-    this.ogImage = 'https://luxlog.vercel.app/icons/Icon-512.png',
+    this.ogImage = 'https://luxlog.vercel.app/images/og-default.svg',
     this.twitterCard = 'summary_large_image',
     this.noindex = false,
     this.lang = 'vi',

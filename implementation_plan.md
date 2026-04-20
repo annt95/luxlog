@@ -199,8 +199,8 @@ Migrations `005`, `006`, `007` chưa apply trên DB production. Code sẽ fail n
 ### F9. SEO Enterprise-Ready 🟡 HIGH (Web Platform)
 
 **Trạng thái thực thi (2026-04-20):**
-- ✅ Hoàn thành phần cốt lõi: runtime meta SEO, OG/Twitter fallback, robots, dynamic sitemap API, bot rewrites, bot snapshot endpoints, JSON-LD cơ bản.
-- 🟡 Còn lại để đạt full enterprise: OG image 1200x630 chuẩn brand, semantic alt/H1 audit toàn app, CWV optimization sâu, service worker/offline strategy.
+- ✅ Hoàn thành phần cốt lõi: runtime meta SEO, OG/Twitter fallback, robots, dynamic sitemap API, bot rewrites, bot snapshot endpoints, JSON-LD (WebApplication/ImageObject/ProfilePage), OG asset 1200x630, semantic alt/H1 cơ bản, install prompt, offline fallback.
+- 🟡 Còn lại để đạt full enterprise: CWV optimization sâu theo dữ liệu production (LCP/CLS/INP), bundle optimization audit.
 
 > Flutter Web mặc định render lên Canvas/WebGL → Google bot KHÔNG đọc được nội dung.
 > Cần chiến lược kết hợp: **pre-rendering**, **meta tags**, **structured data**, và **server-side fallback**.
@@ -235,7 +235,7 @@ Migrations `005`, `006`, `007` chưa apply trên DB production. Code sẽ fail n
   <meta name="twitter:description" content="Share & discover analog photography">
   <meta name="twitter:image" content="https://luxlog.vercel.app/images/og-default.jpg">
   ```
-- [ ] **OG image asset**: Tạo `web/images/og-default.jpg` (1200×630px)
+- [x] **OG image asset**: Tạo `web/images/og-default.svg` (1200×630)
 - [x] **Dynamic OG for photos**: Vercel Edge Function / Serverless route `/api/seo/photo/:id`
   - Query Supabase → trả về HTML page với OG tags + redirect (cho crawlers)
 - [x] **Dynamic OG for profiles**: `/api/seo/user/:username`
@@ -314,18 +314,18 @@ Migrations `005`, `006`, `007` chưa apply trên DB production. Code sẽ fail n
   - Popular tags: `/tag/{name}` (top 50 tags)
   - Regenerate daily via cron hoặc on-demand
 - [x] **404 page**: Custom 404 với navigation + suggestion (cũng giúp crawlers)
-- [ ] **Heading hierarchy**: Ensure H1 duy nhất per route (Flutter `Semantics`)
-- [ ] **Image alt text**: `PhotoCard` cần có `semanticLabel` cho ảnh
+- [x] **Heading hierarchy**: Ensure H1 duy nhất per route (Flutter `Semantics`)
+- [x] **Image alt text**: `PhotoCard` cần có `semanticLabel` cho ảnh
 
 #### F9.6 — Performance & Core Web Vitals
 - [ ] **Flutter build renderer**: Sử dụng `--web-renderer canvaskit` (mặc định) nhưng thêm loading indicator cho LCP
 - [ ] **Loading skeleton**: Đã có `skeleton_widgets.dart` — verify nó render nhanh < 2.5s (LCP target)
-- [ ] **Font optimization**: Preload Google Fonts critical subset
+- [x] **Font optimization**: Preload/Preconnect Google Fonts critical origins
   ```html
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=..." as="style">
   ```
-- [ ] **Image optimization**: Serve responsive images (Supabase Storage transform hoặc Vercel Image Optimization)
-- [ ] **Vercel Speed Insights** (đã có) — monitor CWV scores
+- [x] **Image optimization**: Serve responsive images (Supabase render transform) cho feed/card/detail
+- [x] **Vercel Speed Insights** (đã có) — monitor CWV scores
 - [ ] **Bundle size**: Tree-shake unused packages; defer non-critical JS
 
 #### F9.7 — PWA & Manifest Upgrade
@@ -335,8 +335,8 @@ Migrations `005`, `006`, `007` chưa apply trên DB production. Code sẽ fail n
   - `"categories": ["photography", "social"]`
   - `"screenshots"`: App screenshots cho install prompt
   - `"theme_color"`: Match brand gold (#C5A572 or similar)
-- [ ] **Service Worker**: Cache static assets + offline fallback page
-- [ ] **Install prompt**: Hiển thị "Add to Home Screen" banner cho mobile web users
+- [x] **Service Worker**: Dùng Flutter web service worker release + bổ sung offline fallback page (`web/offline.html`)
+- [x] **Install prompt**: Hiển thị "Add to Home Screen" banner cho mobile web users
 
 #### F9.8 — Content & Crawlability Strategy
 - [x] **Public pages (no auth required)**:
@@ -350,6 +350,26 @@ Migrations `005`, `006`, `007` chưa apply trên DB production. Code sẽ fail n
   - `/login`, `/signup`, `/upload`, `/notifications`, `/profile/edit`
 - [ ] **Internal linking**: TagChips, photographer names, portfolio links tạo mạng lưới liên kết nội bộ
 - [x] **URL structure**: Đã clean (`/photo/123`, `/u/name`, `/tag/portra400`) ✅
+
+#### F9.9 — Production SEO QA Gate (Release Checklist)
+- [x] **QA automation scripts**: `scripts/seo_qa.sh` (bash) + `scripts/seo_qa.ps1` (PowerShell)
+  - Usage: `bash scripts/seo_qa.sh` or `./scripts/seo_qa.ps1 -BaseUrl https://luxlog.vercel.app -PhotoId <id> -Username <name>`
+- [ ] **CWV budget (75th percentile)**: LCP <= 2.5s, CLS <= 0.1, INP <= 200ms (mobile)
+- [ ] **Bot snapshot validation**:
+  - [ ] `curl -A "googlebot" https://luxlog.vercel.app/photo/{id}` trả HTML có `og:title`, `canonical`, JSON-LD
+  - [ ] `curl -A "twitterbot" https://luxlog.vercel.app/u/{username}` trả `og:type=profile`
+- [ ] **Sitemap validation**:
+  - [ ] `https://luxlog.vercel.app/sitemap.xml` trả XML hợp lệ
+  - [ ] Có URL động: `/photo/*`, `/u/*`, `/p/*`, `/tag/*`
+- [ ] **Robots validation**:
+  - [ ] `https://luxlog.vercel.app/robots.txt` có đầy đủ disallow private routes
+- [ ] **Rich result / social debugger checks**:
+  - [ ] Google Rich Results Test pass cho 1 photo page
+  - [ ] Facebook Sharing Debugger không cảnh báo OG thiếu
+  - [ ] X Card Validator hiển thị ảnh preview đúng
+- [ ] **Search Console**:
+  - [ ] Submit sitemap
+  - [ ] Kiểm tra Indexing coverage sau 24-72h
 
 ---
 
@@ -430,7 +450,7 @@ integration_test/ (1 .dart file)
 | 4 | F3. Decide Collections/Gear tabs | 🟡 High | Chưa xử lý |
 | 5 | F4. markAllAsRead provider action | 🟡 High | Chưa xử lý |
 | 6 | F5. Expand test coverage | 🟡 High | Chưa xử lý |
-| 7 | **F9. SEO Enterprise-Ready** | **🟡 High** | **Core implemented (2026-04-20)** |
+| 7 | **F9. SEO Enterprise-Ready** | **🟡 High** | **Implemented + hardening done; pending prod QA gate** |
 | 8 | F6. UI Polish (pagination, tablet, a11y) | 🟢 Med | Chưa xử lý |
 | 9 | F7. Security pre-launch (rate-limit, CAPTCHA) | 🟢 Med | Chưa xử lý |
 | 10 | F8. Observability (Sentry, analytics) | 🔵 Low | Chưa xử lý |

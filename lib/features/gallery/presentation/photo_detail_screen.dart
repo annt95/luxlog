@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/core/services/image_url_optimizer.dart';
 import 'package:luxlog/shared/widgets/exif_badge.dart';
 import 'package:luxlog/shared/widgets/tag_chip.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
@@ -54,6 +55,11 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
           final title = photo['title'] as String? ?? '';
           final caption = photo['caption'] as String? ?? photo['description'] as String? ?? '';
           final imageUrl = photo['image_url'] as String? ?? '';
+          final optimizedImageUrl = optimizeImageUrl(
+            imageUrl,
+            width: 1800,
+            quality: 80,
+          );
           final camera = photo['camera'] as String? ?? 'Camera';
           final focalLength = photo['focal_length'] as String?;
           final aperture = photo['aperture'] as String?;
@@ -101,7 +107,7 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
                   ),
                   color: AppColors.surfaceContainerLowest,
                   child: CachedNetworkImage(
-                    imageUrl: imageUrl,
+                    imageUrl: optimizedImageUrl,
                     fit: BoxFit.contain,
                   ),
                 ),

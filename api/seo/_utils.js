@@ -36,11 +36,11 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function renderSeoHtml({ title, description, canonicalPath, ogImage, jsonLd, heading, bodyText }) {
+function renderSeoHtml({ title, description, canonicalPath, ogImage, jsonLd, heading, bodyText, ogType = 'website' }) {
   const canonical = `${SITE_URL}${canonicalPath}`;
   const safeTitle = escapeHtml(title);
   const safeDescription = escapeHtml(description);
-  const safeOgImage = escapeHtml(ogImage || `${SITE_URL}/icons/Icon-512.png`);
+  const safeOgImage = escapeHtml(ogImage || `${SITE_URL}/images/og-default.svg`);
   const safeHeading = escapeHtml(heading || title);
   const safeBody = escapeHtml(bodyText || description);
   const jsonLdText = jsonLd ? JSON.stringify(jsonLd) : '';
@@ -55,7 +55,7 @@ function renderSeoHtml({ title, description, canonicalPath, ogImage, jsonLd, hea
     <meta name="robots" content="index,follow" />
     <link rel="canonical" href="${canonical}" />
     <meta property="og:site_name" content="Luxlog" />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content="${escapeHtml(ogType)}" />
     <meta property="og:title" content="${safeTitle}" />
     <meta property="og:description" content="${safeDescription}" />
     <meta property="og:url" content="${canonical}" />
