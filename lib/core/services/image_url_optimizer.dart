@@ -1,3 +1,7 @@
+/// Whether Supabase Image Transformations is available (Pro plan feature).
+/// Set to true once the project is on a plan that supports /render/image/.
+const _imageTransformsEnabled = false;
+
 String optimizeImageUrl(
   String url, {
   int? width,
@@ -6,6 +10,9 @@ String optimizeImageUrl(
 }) {
   final trimmed = url.trim();
   if (trimmed.isEmpty) return trimmed;
+
+  // Image Transforms disabled — return original URL to avoid 400 errors.
+  if (!_imageTransformsEnabled) return trimmed;
 
   Uri uri;
   try {
