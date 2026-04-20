@@ -155,7 +155,11 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: '$label tab${isActive ? ', selected' : ''}${hasBadge ? ', has notifications' : ''}',
+      selected: isActive,
+      child: GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
@@ -216,6 +220,7 @@ class _NavItem extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }
@@ -223,7 +228,12 @@ class _NavItem extends StatelessWidget {
 class _UploadFab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: 'Upload photo',
+      child: Tooltip(
+        message: 'Upload photo',
+        child: GestureDetector(
       onTap: () => context.push('/upload'),
       child: Container(
         width: 52,
@@ -249,6 +259,7 @@ class _UploadFab extends StatelessWidget {
           color: Color(0xFF412C11), // onPrimary
           size: 26,
         ),
+      ),
       ),
     );
   }

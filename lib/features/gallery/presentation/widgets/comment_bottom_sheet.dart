@@ -1,26 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/features/gallery/providers/photo_provider.dart';
 
-class CommentBottomSheet extends StatefulWidget {
+class CommentBottomSheet extends ConsumerStatefulWidget {
   final String photoId;
   const CommentBottomSheet({super.key, required this.photoId});
 
   @override
-  State<CommentBottomSheet> createState() => _CommentBottomSheetState();
+  ConsumerState<CommentBottomSheet> createState() => _CommentBottomSheetState();
 }
 
-class _CommentBottomSheetState extends State<CommentBottomSheet> {
+class _CommentBottomSheetState extends ConsumerState<CommentBottomSheet> {
   final _textCtrl = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-
-  static final _mockComments = [
-    ('Sarah K.', 'Absolutely stunning! The bokeh is silky smooth 😍', '2h', true),
-    ('Alex M.', 'Which filter did you use? The colors are incredible.', '3h', false),
-    ('Rio P.', 'The 35GM is such a phenomenal lens, great shot!', '5h', false),
-    ('David J.', 'Is this in Kyoto? Getting huge Japan vibes.', '6h', false),
-    ('Lina R.', 'Your tones never miss 🔥', '1d', false),
-    ('Mark T.', 'Teach me master!', '2d', false),
-  ];
+  bool _sending = false;
 
   @override
   void dispose() {
@@ -29,10 +23,35 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
     super.dispose();
   }
 
+  Future<void> _sendComment() async {
+    final text = _textCtrl.text.trim();
+    if (text.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    try {
+      final repo = ref.read(photoRepositoryProvider);
+      await repo.addComment(widget.photoId, text);
+      _textCtrl.clear();
+      _focusNode.unfocus();
+      // Refresh photo detail to get new comments
+      ref.invalidate(photoDetailProvider(widget.photoId));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to post comment')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Determine bottom padding for keyboard
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final photoAsync = ref.watch(photoDetailProvider(widget.photoId));
+    final comments = photoAsync.whenData<List<dynamic>>((photo) {
+      return (photo['comments'] as List<dynamic>?) ?? [];
+    });
 
     return Container(
       constraints: BoxConstraints(
@@ -50,75 +69,67 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
             decoration: const BoxDecoration(
               border: Border(bottom: BorderSide(color: AppColors.surfaceContainerHigh)),
             ),
-            child: Stack(
-              alignment: Alignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(width: double.infinity),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.outlineVariant,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text('Comments', style: AppTextStyles.titleMedium),
-                  ],
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
+                const SizedBox(height: 12),
+                Text('Comments', style: AppTextStyles.titleMedium),
               ],
             ),
           ),
 
           // Comments List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              itemCount: _mockComments.length,
-              itemBuilder: (context, i) {
-                final c = _mockComments[i];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: AppColors.surfaceContainerHigh,
-                        child: Text(c.$1[0], style: AppTextStyles.exifData),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+            child: comments.when(
+              loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+              error: (_, __) => const Center(child: Text('Failed to load comments')),
+              data: (commentList) {
+                if (commentList.isEmpty) {
+                  return const Center(
+                    child: Text('No comments yet. Be the first!', style: TextStyle(color: AppColors.onSurfaceVariant)),
+                  );
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                  itemCount: commentList.length,
+                  itemBuilder: (context, i) {
+                    final c = commentList[i] as Map<String, dynamic>;
+                    final cProfile = c['profiles'] as Map<String, dynamic>?;
+                    final name = cProfile?['full_name'] as String? ?? cProfile?['username'] as String? ?? 'User';
+                    final text = c['text'] as String? ?? '';
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor: AppColors.surfaceContainerHigh,
+                            child: Text(name.isNotEmpty ? name[0] : 'U', style: AppTextStyles.exifData),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(c.$1, style: AppTextStyles.label),
-                                const SizedBox(width: 8),
-                                Text(c.$3, style: AppTextStyles.caption),
+                                Text(name, style: AppTextStyles.label),
+                                const SizedBox(height: 2),
+                                Text(text, style: AppTextStyles.body),
                               ],
                             ),
-                            const SizedBox(height: 2),
-                            Text(c.$2, style: AppTextStyles.body),
-                            const SizedBox(height: 8),
-                            Text('Reply', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600)),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        icon: Icon(
-                          c.$4 ? Icons.favorite : Icons.favorite_border,
-                          size: 16,
-                          color: c.$4 ? AppColors.error : AppColors.onSurfaceVariant,
-                        ),
-                        onPressed: () {},
-                      )
-                    ],
-                  ),
+                    );
+                  },
                 );
               },
             ),
@@ -144,9 +155,11 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                     controller: _textCtrl,
                     focusNode: _focusNode,
                     style: AppTextStyles.body,
+                    maxLength: 1000,
                     decoration: InputDecoration(
                       hintText: 'Add a comment...',
                       hintStyle: AppTextStyles.bodySmall,
+                      counterText: '',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
                         borderSide: BorderSide.none,
@@ -160,14 +173,11 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.send),
+                  icon: _sending
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+                      : const Icon(Icons.send),
                   color: AppColors.primary,
-                  onPressed: () {
-                    if (_textCtrl.text.isNotEmpty) {
-                      _textCtrl.clear();
-                      _focusNode.unfocus();
-                    }
-                  },
+                  onPressed: _sendComment,
                 ),
               ],
             ),

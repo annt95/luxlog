@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/core/services/image_url_optimizer.dart';
 import 'package:luxlog/shared/widgets/exif_badge.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
+import 'package:luxlog/features/profile/providers/user_provider.dart';
 
 /// Module 1: Photo Detail
 class PhotoDetailScreen extends ConsumerStatefulWidget {
@@ -20,7 +23,61 @@ class PhotoDetailScreen extends ConsumerStatefulWidget {
 class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
   bool _liked = false;
   bool _saved = false;
-  int _likes = 2471;
+  int _likes = 0;
+  bool _following = false;
+  bool _likeLoading = true;
+  bool _followLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  void _initSocialState(Map<String, dynamic> photo) {
+    if (_likeLoading) {
+      _likes = photo['likes_count'] as int? ?? 0;
+    }
+  }
+
+  Future<void> _toggleLike(String photoId) async {
+    final repo = ref.read(photoRepositoryProvider);
+    setState(() {
+      _liked = !_liked;
+      _likes += _liked ? 1 : -1;
+    });
+    try {
+      if (_liked) {
+        await repo.likePhoto(photoId);
+      } else {
+        await repo.unlikePhoto(photoId);
+      }
+    } catch (_) {
+      // Revert on failure
+      setState(() {
+        _liked = !_liked;
+        _likes += _liked ? 1 : -1;
+      });
+    }
+  }
+
+  Future<void> _toggleFollow(String targetUserId) async {
+    final userRepo = ref.read(userRepositoryProvider);
+    setState(() => _following = !_following);
+    try {
+      if (_following) {
+        await userRepo.followUser(targetUserId);
+      } else {
+        await userRepo.unfollowUser(targetUserId);
+      }
+    } catch (_) {
+      setState(() => _following = !_following);
+    }
+  }
+
+  void _sharePhoto(String title, String photoId) {
+    final url = 'https://luxlog.app/photo/$photoId';
+    SharePlus.instance.share(ShareParams(text: '$title\n$url'));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,9 +96,35 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
           final fullName = profile?['full_name'] as String?;
           final displayName = (fullName != null && fullName.isNotEmpty) ? fullName : username;
           final avatarUrl = profile?['avatar_url'] as String?;
+          final userId = photo['user_id'] as String? ?? '';
           final title = photo['title'] as String? ?? '';
           final caption = photo['caption'] as String? ?? photo['description'] as String? ?? '';
           final imageUrl = photo['image_url'] as String? ?? '';
+
+          _initSocialState(photo);
+
+          // Load like state from server
+          ref.listen(photoLikeStateProvider(widget.photoId), (_, next) {
+            next.whenData((liked) {
+              if (_likeLoading) {
+                setState(() { _liked = liked; _likeLoading = false; });
+              }
+            });
+          });
+          // Eagerly watch so the provider actually runs
+          ref.watch(photoLikeStateProvider(widget.photoId));
+
+          // Load follow state from server
+          if (userId.isNotEmpty) {
+            ref.listen(followStateProvider(userId), (_, next) {
+              next.whenData((following) {
+                if (_followLoading) {
+                  setState(() { _following = following; _followLoading = false; });
+                }
+              });
+            });
+            ref.watch(followStateProvider(userId));
+          }
           final optimizedImageUrl = optimizeImageUrl(
             imageUrl,
             width: 1800,
@@ -72,9 +155,13 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
                 floating: true,
                 leading: _GlassBackButton(),
                 actions: [
-                  _GlassIconButton(
-                    icon: Icons.share_outlined,
-                    onTap: () {},
+                  Semantics(
+                    button: true,
+                    label: 'Share photo',
+                    child: _GlassIconButton(
+                      icon: Icons.share_outlined,
+                      onTap: () => _sharePhoto(title, widget.photoId),
+                    ),
                   ),
                   _GlassIconButton(
                     icon: Icons.more_horiz,
@@ -115,11 +202,11 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
                         liked: _liked,
                         saved: _saved,
                         likeCount: _likes,
-                        onLike: () => setState(() {
-                          _liked = !_liked;
-                          _likes += _liked ? 1 : -1;
-                        }),
+                        following: _following,
+                        onLike: () => _toggleLike(widget.photoId),
                         onSave: () => setState(() => _saved = !_saved),
+                        onFollow: userId.isNotEmpty ? () => _toggleFollow(userId) : null,
+                        onTapProfile: () => context.push('/u/$username'),
                       ),
 
                       // Title
@@ -157,7 +244,7 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
                   ),
 
                   // Stats row
-                  _StatsRow(likes: photo['likes_count'] as int? ?? _likes),
+                  _StatsRow(likes: _likes),
 
                   // Comments section
                   _CommentsSection(),
@@ -186,8 +273,11 @@ class _PhotographerRow extends StatelessWidget {
   final bool liked;
   final bool saved;
   final int likeCount;
+  final bool following;
   final VoidCallback onLike;
   final VoidCallback onSave;
+  final VoidCallback? onFollow;
+  final VoidCallback? onTapProfile;
 
   const _PhotographerRow({
     required this.displayName,
@@ -196,8 +286,11 @@ class _PhotographerRow extends StatelessWidget {
     required this.liked,
     required this.saved,
     required this.likeCount,
+    required this.following,
     required this.onLike,
     required this.onSave,
+    this.onFollow,
+    this.onTapProfile,
   });
 
   @override
@@ -206,8 +299,10 @@ class _PhotographerRow extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          // Avatar
-          Container(
+          // Avatar — tappable to profile
+          GestureDetector(
+            onTap: onTapProfile,
+            child: Container(
             width: 44,
             height: 44,
             padding: const EdgeInsets.all(1.5),
@@ -228,26 +323,37 @@ class _PhotographerRow extends StatelessWidget {
                 : null,
             ),
           ),
+          ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(displayName, style: AppTextStyles.titleMedium),
-                Text(
-                  '@$username',
-                  style: AppTextStyles.bodySmall,
-                ),
-              ],
+            child: GestureDetector(
+              onTap: onTapProfile,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(displayName, style: AppTextStyles.titleMedium),
+                  Text(
+                    '@$username',
+                    style: AppTextStyles.bodySmall,
+                  ),
+                ],
+              ),
             ),
           ),
           // Follow button
-          OutlinedButton(
-            onPressed: () {},
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          Semantics(
+            button: true,
+            label: following ? 'Unfollow $displayName' : 'Follow $displayName',
+            child: OutlinedButton(
+              onPressed: onFollow,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                backgroundColor: following ? AppColors.primary : null,
+                foregroundColor: following ? AppColors.onPrimary : null,
+              ),
+              child: Text(following ? 'Following' : 'Follow'),
             ),
-            child: const Text('Follow'),
+          ),
           ),
           const SizedBox(width: 8),
           // Like

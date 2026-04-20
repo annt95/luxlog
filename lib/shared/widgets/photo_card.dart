@@ -10,6 +10,7 @@ class PhotoCard extends StatefulWidget {
   final String imageUrl;
   final String photographerName;
   final String? photographerAvatar;
+  final String? photographerUsername;
   final String? title;
   final int likes;
   final bool isLiked;
@@ -25,6 +26,7 @@ class PhotoCard extends StatefulWidget {
     required this.imageUrl,
     required this.photographerName,
     this.photographerAvatar,
+    this.photographerUsername,
     this.title,
     required this.likes,
     this.isLiked = false,
@@ -178,8 +180,12 @@ class _PhotoCardState extends State<PhotoCard> {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   child: Row(
                     children: [
-                      // Photographer avatar
-                      CircleAvatar(
+                      // Photographer avatar — tappable to profile
+                      GestureDetector(
+                        onTap: widget.photographerUsername != null
+                            ? () => context.push('/u/${widget.photographerUsername}')
+                            : null,
+                        child: CircleAvatar(
                         radius: 13,
                         backgroundColor: AppColors.surfaceContainerHigh,
                         backgroundImage: widget.photographerAvatar != null
@@ -196,6 +202,7 @@ class _PhotoCardState extends State<PhotoCard> {
                                 ),
                               )
                             : null,
+                      ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(

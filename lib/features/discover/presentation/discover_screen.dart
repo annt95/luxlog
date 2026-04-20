@@ -2,8 +2,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import 'package:luxlog/features/profile/providers/user_provider.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/core/services/image_url_optimizer.dart';
 import 'package:luxlog/shared/widgets/photo_card.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
 import 'package:luxlog/features/tags/providers/category_provider.dart';
@@ -47,8 +50,26 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
       _selectedFilter = 0;
     }
 
-    // Load photo feed
-    final feedAsync = ref.watch(photoFeedProvider(page: 0, limit: 24));
+    // Load photo feed — filtered by selected category
+    final AsyncValue<List<Map<String, dynamic>>> feedAsync;
+    if (_selectedFilter == 0) {
+      // "All" — show all photos
+      feedAsync = ref.watch(photoFeedProvider(page: 0, limit: 24));
+    } else if (_selectedFilter == 1) {
+      // "Trending" — sort by likes
+      feedAsync = ref.watch(editorsPickProvider).whenData(
+        (photos) => photos,
+      );
+    } else {
+      // Category-specific filter
+      final categoryIndex = _selectedFilter - 2;
+      if (categoryIndex < categories.length) {
+        final slug = categories[categoryIndex]['slug'] as String? ?? categories[categoryIndex]['name'] as String? ?? '';
+        feedAsync = ref.watch(categoryPhotosProvider(slug));
+      } else {
+        feedAsync = ref.watch(photoFeedProvider(page: 0, limit: 24));
+      }
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -131,6 +152,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                       imageUrl: p['image_url'] as String? ?? '',
                       photographerName: (fullName != null && fullName.isNotEmpty) ? fullName : username,
                       photographerAvatar: profile?['avatar_url'] as String?,
+                      photographerUsername: username,
                       title: p['title'] as String?,
                       likes: p['likes_count'] as int? ?? 0,
                       camera: p['camera'] as String? ?? p['film_camera'] as String?,
@@ -366,10 +388,41 @@ class _FilterRow extends StatelessWidget {
 
 // ── Hero Section ─────────────────────────────────────────────────────────────
 
-class _HeroSection extends StatelessWidget {
+class _HeroSection extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pickAsync = ref.watch(editorsPickProvider);
+
+    return pickAsync.when(
+      loading: () => Container(
+        margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        height: 280,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(4),
+          color: AppColors.surfaceContainerHigh,
+        ),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (photos) {
+        if (photos.isEmpty) return const SizedBox.shrink();
+        final hero = photos.first;
+        final profile = hero['profiles'] as Map<String, dynamic>?;
+        final displayName = profile?['full_name'] as String? ?? profile?['username'] as String? ?? 'Photographer';
+        final heroTitle = hero['title'] as String? ?? 'Featured Photo';
+        final imageUrl = hero['image_url'] as String? ?? '';
+        final camera = hero['camera'] as String? ?? '';
+        final aperture = hero['aperture'] as String? ?? '';
+        final iso = hero['iso'] as int?;
+        final exifStr = [
+          if (camera.isNotEmpty) camera,
+          if (aperture.isNotEmpty) 'ƒ/$aperture',
+          if (iso != null) 'ISO $iso',
+        ].join(' · ');
+        final photoId = hero['id'] as String? ?? '';
+
+        return GestureDetector(
+          onTap: () => context.push('/photo/$photoId'),
+          child: Container(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       height: 280,
       decoration: BoxDecoration(
@@ -382,10 +435,10 @@ class _HeroSection extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             // Hero image
-            Image.network(
-              'https://picsum.photos/seed/hero/1200/600',
+            CachedNetworkImage(
+              imageUrl: optimizeImageUrl(imageUrl, width: 1200, quality: 80),
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorWidget: (_, __, ___) => Container(
                 color: AppColors.surfaceContainerHigh,
               ),
             ),
@@ -428,14 +481,14 @@ class _HeroSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'The Golden Hour',
+                    heroTitle,
                     style: AppTextStyles.sectionHeader.copyWith(
                       color: Colors.white,
                     ),
                   ).animate().fadeIn(delay: 200.ms).slideX(begin: -0.1),
                   const SizedBox(height: 4),
                   Text(
-                    'by Marcus Chen · Sony A7IV · ƒ/1.8 · ISO 400',
+                    'by $displayName${exifStr.isNotEmpty ? ' · $exifStr' : ''}',
                     style: AppTextStyles.exifData.copyWith(
                       color: AppColors.secondary,
                     ),
@@ -446,6 +499,9 @@ class _HeroSection extends StatelessWidget {
           ],
         ),
       ),
+          ),
+        );
+      },
     );
   }
 }

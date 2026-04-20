@@ -269,6 +269,85 @@ class PhotoRepository {
     }
   }
 
+  Future<bool> hasLiked(String photoId) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return false;
+    try {
+      final response = await _client
+          .from('likes')
+          .select('photo_id')
+          .eq('photo_id', photoId)
+          .eq('user_id', userId)
+          .maybeSingle();
+      return response != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> isFollowing(String targetUserId) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return false;
+    try {
+      final response = await _client
+          .from('follows')
+          .select('follower_id')
+          .eq('follower_id', userId)
+          .eq('following_id', targetUserId)
+          .maybeSingle();
+      return response != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchFollowingFeed({required int page, int limit = 20}) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return [];
+    try {
+      final followingIds = await _client
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', userId);
+      final ids = followingIds.map((r) => r['following_id'] as String).toList();
+      if (ids.isEmpty) return [];
+      final response = await _client
+          .from('photos')
+          .select('*, profiles!photos_user_id_fkey(username, avatar_url, full_name)')
+          .inFilter('user_id', ids)
+          .order('created_at', ascending: false)
+          .range(page * limit, (page + 1) * limit - 1);
+      return List<Map<String, dynamic>>.from(response);
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải feed theo dõi (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException('Lỗi tải feed theo dõi', cause: e, stackTrace: stackTrace);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchTopLiked({int limit = 10}) async {
+    try {
+      final response = await _client
+          .from('photos')
+          .select('*, profiles!photos_user_id_fkey(username, avatar_url, full_name)')
+          .order('likes_count', ascending: false)
+          .limit(limit);
+      return List<Map<String, dynamic>>.from(response);
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải ảnh nổi bật (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException('Lỗi tải ảnh nổi bật', cause: e, stackTrace: stackTrace);
+    }
+  }
+
   Future<void> addComment(String photoId, String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) {

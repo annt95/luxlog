@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/core/services/image_url_optimizer.dart';
 import 'package:luxlog/features/gallery/presentation/widgets/comment_bottom_sheet.dart';
@@ -30,13 +32,14 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final feedAsync = ref.watch(
-      photoFeedProvider(
-        page: 0,
-        limit: 24,
-        tab: _selectedTab == 0 ? 'for-you' : 'following',
-      ),
-    );
+    final AsyncValue<List<Map<String, dynamic>>> feedAsync;
+    if (_selectedTab == 1) {
+      feedAsync = ref.watch(followingFeedProvider(0));
+    } else {
+      feedAsync = ref.watch(
+        photoFeedProvider(page: 0, limit: 24, tab: 'for-you'),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -223,12 +226,15 @@ class _FeedAppBarDelegate extends SliverPersistentHeaderDelegate {
                   IconButton(
                     icon: const Icon(Icons.favorite_border, size: 22),
                     color: AppColors.onSurfaceVariant,
-                    onPressed: () {},
+                    onPressed: () => context.push('/notifications'),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.send_outlined, size: 22),
-                    color: AppColors.onSurfaceVariant,
-                    onPressed: () {},
+                  Tooltip(
+                    message: 'Coming soon',
+                    child: IconButton(
+                      icon: const Icon(Icons.send_outlined, size: 22),
+                      color: AppColors.onSurfaceVariant,
+                      onPressed: () {},
+                    ),
                   ),
                 ],
               ),
@@ -396,10 +402,7 @@ class _PostCardState extends State<_PostCard> {
 
   void _handleDoubleTap() {
     if (!_liked) {
-      setState(() {
-        _liked = true;
-        _likes++;
-      });
+      _toggleLike();
     }
   }
 
@@ -408,6 +411,23 @@ class _PostCardState extends State<_PostCard> {
       _liked = !_liked;
       _likes += _liked ? 1 : -1;
     });
+    // Fire-and-forget to backend
+    final container = ProviderScope.containerOf(context, listen: false);
+    final repo = container.read(photoRepositoryProvider);
+    if (_liked) {
+      repo.likePhoto(widget.post.id).catchError((_) {
+        if (mounted) setState(() { _liked = false; _likes--; });
+      });
+    } else {
+      repo.unlikePhoto(widget.post.id).catchError((_) {
+        if (mounted) setState(() { _liked = true; _likes++; });
+      });
+    }
+  }
+
+  void _sharePost() {
+    final url = 'https://luxlog.app/photo/${widget.post.id}';
+    SharePlus.instance.share(ShareParams(text: '${widget.post.caption}\n$url'));
   }
 
   @override
@@ -457,8 +477,7 @@ class _PostCardState extends State<_PostCard> {
                 backgroundColor: Colors.transparent,
                 builder: (_) => CommentBottomSheet(photoId: widget.post.id),
               );
-            },
-          ),
+            },            onShare: _sharePost,          ),
 
           // ── Caption ────────────────────────────────────
           _PostCaption(
@@ -485,8 +504,10 @@ class _PostHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
         children: [
-          // Avatar with gold ring
-          Container(
+          // Avatar with gold ring — tappable to profile
+          GestureDetector(
+            onTap: () => context.push('/u/${post.username}'),
+            child: Container(
             width: 38,
             height: 38,
             padding: const EdgeInsets.all(1.5),
@@ -504,14 +525,18 @@ class _PostHeader extends StatelessWidget {
               ),
             ),
           ),
+          ),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(
+            child: GestureDetector(
+              onTap: () => context.push('/u/${post.username}'),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(post.displayName, style: AppTextStyles.label),
                 Text(post.timeAgo, style: AppTextStyles.caption),
               ],
+            ),
             ),
           ),
           IconButton(
@@ -559,6 +584,7 @@ class _PostActions extends StatelessWidget {
   final int commentCount;
   final VoidCallback onLike;
   final VoidCallback onComment;
+  final VoidCallback? onShare;
 
   const _PostActions({
     required this.liked,
@@ -566,6 +592,7 @@ class _PostActions extends StatelessWidget {
     required this.commentCount,
     required this.onLike,
     required this.onComment,
+    this.onShare,
   });
 
   @override
@@ -574,29 +601,33 @@ class _PostActions extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
         children: [
+          Semantics(button: true, label: liked ? 'Unlike, $likeCount likes' : 'Like, $likeCount likes', child:
           _ActionBtn(
             icon: liked ? Icons.favorite : Icons.favorite_border,
             color: liked ? AppColors.error : AppColors.onSurface,
             label: liked ? _fmt(likeCount) : null,
             onTap: onLike,
-          ),
+          )),
+          Semantics(button: true, label: '$commentCount comments', child:
           _ActionBtn(
             icon: Icons.chat_bubble_outline,
             color: AppColors.onSurface,
             label: _fmt(commentCount),
             onTap: onComment,
-          ),
+          )),
+          Semantics(button: true, label: 'Share', child:
           _ActionBtn(
             icon: Icons.send_outlined,
             color: AppColors.onSurface,
-            onTap: () {},
-          ),
+            onTap: onShare ?? () {},
+          )),
           const Spacer(),
+          Tooltip(message: 'Save - Coming soon', child:
           _ActionBtn(
             icon: Icons.bookmark_border_outlined,
             color: AppColors.onSurface,
             onTap: () {},
-          ),
+          )),
         ],
       ),
     );

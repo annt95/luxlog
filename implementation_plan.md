@@ -1,6 +1,6 @@
 # Luxlog — Implementation Progress Tracker
 
-## 📅 Cập nhật lần cuối: 2026-04-20 (Plan A+C+B done)
+## 📅 Cập nhật lần cuối: 2026-04-20 (Plans A+B+C + Plan F Social + Plan D A11y + Plan E Docs)
 
 > Tổng hợp tiến độ triển khai dự án Luxlog dựa trên rà soát toàn bộ mã nguồn thực tế,
 > đối chiếu với PLAN.md và WALKTHROUGH.md.
@@ -12,17 +12,20 @@
 | Khu vực | Hoàn thành | Ghi chú |
 |:---|:---:|:---|
 | Core Infrastructure | **100%** | Env, Supabase, Errors, Models |
-| Data Layer (Repositories) | **100%** | 8 repos: Auth, AuthRemote, Photo, Portfolio, User, Tag, Category, Notification |
+| Data Layer (Repositories) | **100%** | 8 repos + new methods: hasLiked, isFollowing, fetchFollowingFeed, fetchTopLiked |
 | Auth System | **100%** | Email + Google OAuth + guards + password reset |
-| Frontend UI | **98%** | Tất cả màn hình chính + Profile Edit + Homepage uniform grid |
-| UI ↔ Data Wiring | **98%** | Collections/Gear tabs removed in v1; còn lại đã real |
+| Frontend UI | **100%** | All screens + Social features wired |
+| UI ↔ Data Wiring | **100%** | Like/Follow/Comment/Share all connected to backend |
 | Router & Guards | **100%** | 15 routes; protected: upload, notifications, profile/edit |
 | Notification System | **100%** | Realtime stream + badge + markAllAsRead provider + triggers backend |
 | Security | **85%** | RLS + headers + file type whitelist + input sanitization + self-follow guard |
 | Vercel Deployment | **98%** | Pipeline hoạt động; auto-deploy on push; git clean |
-| Testing | **80%** | 27 test files + 11 E2E specs; coverage + integration in CI |
+| Testing | **80%** | 29 test files + 11 E2E specs; coverage + integration in CI |
 | SEO | **90%** | Runtime meta, OG, JSON-LD, sitemap, bot snapshot; pending prod QA gate |
 | Observability | **70%** | ErrorReporter + AppLogger + AnalyticsService + ErrorBoundary wired |
+| Social Features | **95%** | Navigation, Like, Follow, Comment, Share, Category Filter, Editor's Pick |
+| Accessibility | **75%** | Semantic labels on nav, buttons, photo cards, tooltips on actions |
+| Documentation | **80%** | DATABASE.md, CONTRIBUTING.md, implementation_plan.md |
 
 ---
 
