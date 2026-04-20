@@ -27,6 +27,7 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
   bool _following = false;
   bool _likeLoading = true;
   bool _followLoading = true;
+  bool _saveLoading = true;
 
   @override
   void initState() {
@@ -79,6 +80,20 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
     SharePlus.instance.share(ShareParams(text: '$title\n$url'));
   }
 
+  Future<void> _toggleSave(String photoId) async {
+    final repo = ref.read(photoRepositoryProvider);
+    setState(() => _saved = !_saved);
+    try {
+      if (_saved) {
+        await repo.savePhoto(photoId);
+      } else {
+        await repo.unsavePhoto(photoId);
+      }
+    } catch (_) {
+      setState(() => _saved = !_saved);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -125,6 +140,16 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
             });
             ref.watch(followStateProvider(userId));
           }
+
+          // Load save state from server
+          ref.listen(photoSaveStateProvider(widget.photoId), (_, next) {
+            next.whenData((saved) {
+              if (_saveLoading) {
+                setState(() { _saved = saved; _saveLoading = false; });
+              }
+            });
+          });
+          ref.watch(photoSaveStateProvider(widget.photoId));
           final optimizedImageUrl = optimizeImageUrl(
             imageUrl,
             width: 1800,
@@ -204,7 +229,7 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
                         likeCount: _likes,
                         following: _following,
                         onLike: () => _toggleLike(widget.photoId),
-                        onSave: () => setState(() => _saved = !_saved),
+                        onSave: () => _toggleSave(widget.photoId),
                         onFollow: userId.isNotEmpty ? () => _toggleFollow(userId) : null,
                         onTapProfile: () => context.push('/u/$username'),
                       ),

@@ -43,3 +43,13 @@ final editorsPickProvider = FutureProvider.autoDispose<List<Map<String, dynamic>
   final repository = ref.watch(photoRepositoryProvider);
   return repository.fetchTopLiked(limit: 10);
 });
+
+final photoSaveStateProvider = FutureProvider.autoDispose.family<bool, String>((ref, photoId) {
+  final repository = ref.watch(photoRepositoryProvider);
+  return repository.hasSaved(photoId);
+});
+
+final savedPhotosProvider = FutureProvider.autoDispose.family<List<Map<String, dynamic>>, int>((ref, page) {
+  final repository = ref.watch(photoRepositoryProvider);
+  return repository.fetchSavedPhotos(page: page);
+});

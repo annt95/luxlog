@@ -378,4 +378,60 @@ class PhotoRepository {
       );
     }
   }
+
+  Future<void> savePhoto(String photoId) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
+    try {
+      await _client.from('saves').insert({'photo_id': photoId, 'user_id': userId});
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException('Lỗi lưu ảnh (${e.code ?? 'unknown'})', cause: e, stackTrace: stackTrace);
+    }
+  }
+
+  Future<void> unsavePhoto(String photoId) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
+    try {
+      await _client.from('saves').delete().match({'photo_id': photoId, 'user_id': userId});
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException('Lỗi bỏ lưu ảnh (${e.code ?? 'unknown'})', cause: e, stackTrace: stackTrace);
+    }
+  }
+
+  Future<bool> hasSaved(String photoId) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return false;
+    try {
+      final response = await _client
+          .from('saves')
+          .select('photo_id')
+          .eq('photo_id', photoId)
+          .eq('user_id', userId)
+          .maybeSingle();
+      return response != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchSavedPhotos({int page = 0, int limit = 20}) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return [];
+    try {
+      final response = await _client
+          .from('saves')
+          .select('photo_id, photos!inner(*, profiles!photos_user_id_fkey(username, avatar_url, full_name))')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false)
+          .range(page * limit, (page + 1) * limit - 1);
+      return List<Map<String, dynamic>>.from(
+        response.map((r) => r['photos'] as Map<String, dynamic>),
+      );
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException('Lỗi tải ảnh đã lưu (${e.code ?? 'unknown'})', cause: e, stackTrace: stackTrace);
+    } catch (e, stackTrace) {
+      throw NetworkException('Lỗi tải ảnh đã lưu', cause: e, stackTrace: stackTrace);
+    }
+  }
 }

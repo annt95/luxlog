@@ -392,12 +392,22 @@ class _PostCard extends StatefulWidget {
 class _PostCardState extends State<_PostCard> {
   late bool _liked;
   late int _likes;
+  bool _saved = false;
 
   @override
   void initState() {
     super.initState();
     _liked = widget.post.isLiked;
     _likes = widget.post.likes;
+    _loadSaveState();
+  }
+
+  void _loadSaveState() {
+    final container = ProviderScope.containerOf(context, listen: false);
+    final repo = container.read(photoRepositoryProvider);
+    repo.hasSaved(widget.post.id).then((saved) {
+      if (mounted) setState(() => _saved = saved);
+    });
   }
 
   void _handleDoubleTap() {
@@ -428,6 +438,21 @@ class _PostCardState extends State<_PostCard> {
   void _sharePost() {
     final url = 'https://luxlog.app/photo/${widget.post.id}';
     SharePlus.instance.share(ShareParams(text: '${widget.post.caption}\n$url'));
+  }
+
+  void _toggleSave() {
+    setState(() => _saved = !_saved);
+    final container = ProviderScope.containerOf(context, listen: false);
+    final repo = container.read(photoRepositoryProvider);
+    if (_saved) {
+      repo.savePhoto(widget.post.id).catchError((_) {
+        if (mounted) setState(() => _saved = false);
+      });
+    } else {
+      repo.unsavePhoto(widget.post.id).catchError((_) {
+        if (mounted) setState(() => _saved = true);
+      });
+    }
   }
 
   @override
@@ -477,7 +502,10 @@ class _PostCardState extends State<_PostCard> {
                 backgroundColor: Colors.transparent,
                 builder: (_) => CommentBottomSheet(photoId: widget.post.id),
               );
-            },            onShare: _sharePost,          ),
+            },            onShare: _sharePost,
+            saved: _saved,
+            onSave: _toggleSave,
+          ),
 
           // ── Caption ────────────────────────────────────
           _PostCaption(
@@ -585,6 +613,8 @@ class _PostActions extends StatelessWidget {
   final VoidCallback onLike;
   final VoidCallback onComment;
   final VoidCallback? onShare;
+  final bool saved;
+  final VoidCallback? onSave;
 
   const _PostActions({
     required this.liked,
@@ -593,6 +623,8 @@ class _PostActions extends StatelessWidget {
     required this.onLike,
     required this.onComment,
     this.onShare,
+    this.saved = false,
+    this.onSave,
   });
 
   @override
@@ -622,11 +654,11 @@ class _PostActions extends StatelessWidget {
             onTap: onShare ?? () {},
           )),
           const Spacer(),
-          Tooltip(message: 'Save - Coming soon', child:
+          Semantics(button: true, label: saved ? 'Unsave photo' : 'Save photo', child:
           _ActionBtn(
-            icon: Icons.bookmark_border_outlined,
-            color: AppColors.onSurface,
-            onTap: () {},
+            icon: saved ? Icons.bookmark : Icons.bookmark_border_outlined,
+            color: saved ? AppColors.primary : AppColors.onSurface,
+            onTap: onSave ?? () {},
           )),
         ],
       ),
