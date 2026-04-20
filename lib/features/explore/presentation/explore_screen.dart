@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -25,6 +26,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   late final TabController _tabCtrl;
   bool _searching = false;
   String _query = '';
+  Timer? _debounce;
 
   static const _tabs = ['Photos', 'People'];
 
@@ -49,6 +51,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchCtrl.dispose();
     _tabCtrl.dispose();
     super.dispose();
@@ -72,7 +75,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 _query = '';
                 _searchCtrl.clear();
               }),
-              onChanged: (v) => setState(() => _query = v),
+              onChanged: (v) {
+                _debounce?.cancel();
+                final trimmed = v.length > 200 ? v.substring(0, 200) : v;
+                _debounce = Timer(const Duration(milliseconds: 300), () {
+                  if (mounted) setState(() => _query = trimmed.trim());
+                });
+              },
               tabCtrl: _tabCtrl,
               tabs: _tabs,
             ),

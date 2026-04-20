@@ -50,8 +50,12 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
           _websiteCtrl.text = links['website'] as String? ?? '';
         }
       });
-    } catch (_) {
-      // Ignore
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to load profile data')),
+        );
+      }
     }
   }
 

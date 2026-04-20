@@ -4,6 +4,9 @@ import '../../../../core/errors/app_exception.dart';
 class TagRepository {
   final SupabaseClient _client;
 
+  static const int maxTagsPerPhoto = 30;
+  static const int maxTagLength = 50;
+
   TagRepository(this._client);
 
   /// Search tags by prefix (autocomplete)
@@ -117,10 +120,14 @@ class TagRepository {
 
   /// Attach multiple tags to a photo (upsert + increment usage)
   Future<void> attachTagsToPhoto(String photoId, List<String> tagNames) async {
+    if (tagNames.length > maxTagsPerPhoto) {
+      throw ValidationException('Maximum $maxTagsPerPhoto tags per photo');
+    }
     try {
       for (final name in tagNames) {
         final cleanName = name.trim().toLowerCase().replaceAll('#', '');
         if (cleanName.isEmpty) continue;
+        if (cleanName.length > maxTagLength) continue; // skip oversized tags
 
         // Upsert tag and get ID via RPC
         final tagId = await _client.rpc('increment_tag_usage', params: {

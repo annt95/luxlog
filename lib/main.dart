@@ -4,11 +4,14 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/app/router.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/core/services/error_reporter.dart';
 import 'package:luxlog/core/services/supabase_service.dart';
+import 'package:luxlog/core/widgets/error_boundary.dart';
 import 'package:luxlog/features/auth/providers/auth_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  ErrorReporter().initialize();
   Object? initError;
   try {
     await SupabaseService.initialize();
@@ -85,11 +88,13 @@ class LuxlogApp extends ConsumerWidget {
       );
     }
 
-    return MaterialApp.router(
-      title: 'Luxlog',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark,
-      routerConfig: router,
+    return ErrorBoundary(
+      child: MaterialApp.router(
+        title: 'Luxlog',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.dark,
+        routerConfig: router,
+      ),
     );
   }
 }

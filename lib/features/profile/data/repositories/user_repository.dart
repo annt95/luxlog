@@ -114,6 +114,7 @@ class UserRepository {
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
+      if (targetId == userId) return; // prevent self-follow
       await _client.from('follows').insert({
         'follower_id': userId,
         'following_id': targetId,

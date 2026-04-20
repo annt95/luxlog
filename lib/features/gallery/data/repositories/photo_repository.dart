@@ -155,9 +155,17 @@ class PhotoRepository {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw const AuthException('Vui lòng đăng nhập để tải ảnh');
 
+    // Validate file type before any upload
+    const allowedExtensions = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'};
+    final ext = fileName.split('.').last.toLowerCase();
+    if (!allowedExtensions.contains(ext)) {
+      throw ValidationException(
+        'Unsupported file type: .$ext. Allowed: ${allowedExtensions.join(', ')}',
+      );
+    }
+
     try {
-      // 1. Determine file extension from name
-      final ext = fileName.split('.').last.toLowerCase();
+      // 1. Determine file extension from name (already validated above)
       final storagePath = 'uploads/$userId/${DateTime.now().millisecondsSinceEpoch}.$ext';
 
       // Fix MIME type for .jpg (Supabase expects 'image/jpeg' and rejects 'image/jpg' with 400 Bad Request)
@@ -262,13 +270,20 @@ class PhotoRepository {
   }
 
   Future<void> addComment(String photoId, String text) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      throw const ValidationException('Comment cannot be empty');
+    }
+    if (trimmed.length > 1000) {
+      throw const ValidationException('Comment must be under 1000 characters');
+    }
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
       await _client.from('comments').insert({
         'photo_id': photoId,
         'user_id': userId,
-        'text': text,
+        'text': trimmed,
       });
     } on PostgrestException catch (e, stackTrace) {
       throw NetworkException(

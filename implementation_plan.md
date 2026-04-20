@@ -1,6 +1,6 @@
 # Luxlog — Implementation Progress Tracker
 
-## 📅 Cập nhật lần cuối: 2026-04-20 (F3+F4+F5 done)
+## 📅 Cập nhật lần cuối: 2026-04-20 (Plan A+C+B done)
 
 > Tổng hợp tiến độ triển khai dự án Luxlog dựa trên rà soát toàn bộ mã nguồn thực tế,
 > đối chiếu với PLAN.md và WALKTHROUGH.md.
@@ -18,10 +18,11 @@
 | UI ↔ Data Wiring | **98%** | Collections/Gear tabs removed in v1; còn lại đã real |
 | Router & Guards | **100%** | 15 routes; protected: upload, notifications, profile/edit |
 | Notification System | **100%** | Realtime stream + badge + markAllAsRead provider + triggers backend |
-| Security | **95%** | RLS + headers + validation; còn thiếu rate-limit/CAPTCHA |
+| Security | **85%** | RLS + headers + file type whitelist + input sanitization + self-follow guard |
 | Vercel Deployment | **98%** | Pipeline hoạt động; auto-deploy on push; git clean |
-| Testing | **85%** | 23 unit test files + 11 E2E specs; provider + widget tests done |
+| Testing | **80%** | 27 test files + 11 E2E specs; coverage + integration in CI |
 | SEO | **90%** | Runtime meta, OG, JSON-LD, sitemap, bot snapshot; pending prod QA gate |
+| Observability | **70%** | ErrorReporter + AppLogger + AnalyticsService + ErrorBoundary wired |
 
 ---
 
@@ -93,26 +94,55 @@
 - [x] Input validation: signup + upload
 - [x] Error sanitization (user-friendly messages, no internal leak)
 - [x] RLS policies cho mọi table + Storage RLS (owner-only upload/delete)
+- [x] **Upload file type whitelist** — Only jpg/jpeg/png/gif/webp/heic allowed (Plan A1)
+- [x] **Search debounce 300ms** + query length limit 200 chars (Plan A2)
+- [x] **Comment text length limit** — max 1000 chars, reject empty (Plan A3)
+- [x] **Self-follow prevention** — `followUser()` returns early if targetId == userId (Plan A4)
+- [x] **Tag rate limit** — max 30 tags/photo, max 50 chars/tag (Plan A5)
+
+### Observability (NEW — Plan C)
+- [x] `AppLogger` — Structured logging with debug/info/warn/error levels + timestamps
+- [x] `ErrorReporter` — Centralized error reporting, FlutterError.onError + PlatformDispatcher
+- [x] `AnalyticsService` — Key funnel events: signup, upload, like, profile view, search
+- [x] `ErrorBoundary` wired to app root in `main.dart` with ErrorReporter integration
+- [x] Category repository — all 6 catch blocks now preserve cause + stackTrace
+- [x] Upload EXIF parse failure — logged instead of silently swallowed
+- [x] Profile edit load failure — shows SnackBar instead of silent ignore
 
 ### CI/CD & Deployment
 - [x] `vercel-build.sh` — Flutter clone/cache + pub get + build_runner + build web --release
 - [x] `vercel.json` — headers + build config
 - [x] GitHub Actions: analyze + tests
+- [x] **CI coverage gate** — `flutter test --coverage` with 60% threshold (Plan B1)
+- [x] **Coverage artifact upload** — lcov.info uploaded to GitHub Actions artifacts (Plan B1)
+- [x] **Integration test in CI** — `flutter test integration_test/` added to pipeline (Plan B3)
+- [x] GitHub Actions: analyze + tests
 - [x] Vercel auto-deploy on push
 
-### Testing — Unit (15 files)
+### Testing — Unit (15 files + 8 F5 files + 4 Plan A/C/B files = 27 files)
 - [x] `test/core/errors/app_exception_test.dart`
 - [x] `test/core/contracts/schema_contract_test.dart`
 - [x] `test/core/services/image_url_optimizer_test.dart` ✨ NEW
+- [x] `test/core/services/seo_service_test.dart` ✨ F5
+- [x] `test/core/services/observability_test.dart` ✨ Plan C (logger + reporter + analytics)
 - [x] `test/shared/widgets/main_scaffold_test.dart`
 - [x] `test/shared/widgets/photo_card_test.dart` ✨ NEW
 - [x] `test/shared/models/photo_model_test.dart` ✨ NEW
 - [x] `test/features/auth/data/auth_repository_test.dart`
 - [x] `test/features/auth/presentation/login_screen_test.dart`
+- [x] `test/features/auth/presentation/signup_screen_test.dart` ✨ F5
+- [x] `test/features/auth/providers/auth_provider_test.dart` ✨ F5
 - [x] `test/features/gallery/data/photo_repository_test.dart`
+- [x] `test/features/gallery/data/repositories/security_validation_test.dart` ✨ Plan A (file type + comment)
+- [x] `test/features/gallery/presentation/upload_screen_test.dart` ✨ F5
+- [x] `test/features/gallery/providers/photo_provider_test.dart` ✨ F5
 - [x] `test/features/notifications/data/notification_repository_test.dart` ✨ NEW
+- [x] `test/features/notifications/providers/notification_provider_test.dart` ✨ F5
 - [x] `test/features/tags/data/tag_repository_test.dart`
+- [x] `test/features/tags/data/repositories/tag_security_test.dart` ✨ Plan A (tag limits)
+- [x] `test/features/tags/providers/tag_provider_test.dart` ✨ F5
 - [x] `test/features/portfolio/data/portfolio_repository_test.dart`
+- [x] `test/features/portfolio/providers/portfolio_provider_test.dart` ✨ F5
 - [x] `test/features/profile/data/user_repository_test.dart`
 - [x] `test/features/profile/providers/follow_state_provider_test.dart`
 - [x] `test/features/profile/presentation/profile_edit_screen_test.dart` (minimal — chỉ render check)

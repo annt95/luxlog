@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException, StorageException;
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/services/logger.dart';
 
 class CategoryRepository {
   final SupabaseClient _client;
@@ -15,8 +16,9 @@ class CategoryRepository {
           .eq('status', 'approved')
           .order('display_order', ascending: true);
       return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      throw const NetworkException('Lỗi tải danh mục');
+    } catch (e, stackTrace) {
+      AppLogger.error('getCategories failed', e, stackTrace);
+      throw NetworkException('Lỗi tải danh mục', cause: e, stackTrace: stackTrace);
     }
   }
 
@@ -29,8 +31,9 @@ class CategoryRepository {
           .eq('suggested_by', userId)
           .order('created_at', ascending: false);
       return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      throw const NetworkException('Lỗi tải đề xuất danh mục');
+    } catch (e, stackTrace) {
+      AppLogger.error('getMySuggestions failed', e, stackTrace);
+      throw NetworkException('Lỗi tải đề xuất danh mục', cause: e, stackTrace: stackTrace);
     }
   }
 
@@ -58,11 +61,12 @@ class CategoryRepository {
       }).select().single();
 
       return response;
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (e.toString().contains('duplicate')) {
-        throw const StorageException('Danh mục này đã tồn tại');
+        throw const StorageException('Đã có danh mục này rồi');
       }
-      throw const NetworkException('Lỗi đề xuất danh mục');
+      AppLogger.error('suggestCategory failed', e, stackTrace);
+      throw NetworkException('Lỗi đề xuất danh mục', cause: e, stackTrace: stackTrace);
     }
   }
 
@@ -92,8 +96,9 @@ class CategoryRepository {
       return List<Map<String, dynamic>>.from(
         response.map((r) => r['photos'] as Map<String, dynamic>),
       );
-    } catch (e) {
-      throw const NetworkException('Lỗi tải ảnh theo danh mục');
+    } catch (e, stackTrace) {
+      AppLogger.error('getPhotosByCategory failed', e, stackTrace);
+      throw NetworkException('Lỗi tải ảnh theo danh mục', cause: e, stackTrace: stackTrace);
     }
   }
 
@@ -107,8 +112,9 @@ class CategoryRepository {
       return List<Map<String, dynamic>>.from(
         response.map((r) => r['categories'] as Map<String, dynamic>),
       );
-    } catch (e) {
-      throw const NetworkException('Lỗi tải danh mục của ảnh');
+    } catch (e, stackTrace) {
+      AppLogger.error('getCategoriesByPhoto failed', e, stackTrace);
+      throw NetworkException('Lỗi tải danh mục của ảnh', cause: e, stackTrace: stackTrace);
     }
   }
 
@@ -121,8 +127,9 @@ class CategoryRepository {
       }).toList();
 
       await _client.from('photo_categories').upsert(rows);
-    } catch (e) {
-      throw const NetworkException('Lỗi gắn danh mục cho ảnh');
+    } catch (e, stackTrace) {
+      AppLogger.error('attachCategoriesToPhoto failed', e, stackTrace);
+      throw NetworkException('Lỗi gắn danh mục cho ảnh', cause: e, stackTrace: stackTrace);
     }
   }
 }

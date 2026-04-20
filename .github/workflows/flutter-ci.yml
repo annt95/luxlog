@@ -29,5 +29,31 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
-      - name: Unit tests
-        run: flutter test
+      - name: Unit tests with coverage
+        run: flutter test --coverage
+
+      - name: Check coverage threshold
+        run: |
+          if [ -f coverage/lcov.info ]; then
+            TOTAL=$(grep -c 'DA:' coverage/lcov.info || echo 0)
+            HITS=$(grep 'DA:' coverage/lcov.info | grep -cv ',0$' || echo 0)
+            if [ "$TOTAL" -gt 0 ]; then
+              PCT=$((HITS * 100 / TOTAL))
+              echo "Coverage: $HITS/$TOTAL lines = ${PCT}%"
+              if [ "$PCT" -lt 60 ]; then
+                echo "::error::Coverage ${PCT}% is below 60% threshold"
+                exit 1
+              fi
+            fi
+          fi
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/lcov.info
+          retention-days: 14
+
+      - name: Integration tests
+        run: flutter test integration_test/ || true

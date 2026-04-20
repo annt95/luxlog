@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:luxlog/core/services/error_reporter.dart';
 
 class ErrorBoundary extends StatefulWidget {
   final Widget child;
@@ -17,10 +18,10 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
     super.initState();
     // Catch framework errors
     FlutterError.onError = (FlutterErrorDetails details) {
+      ErrorReporter().reportFlutterError(details);
       setState(() {
         _errorDetails = details;
       });
-      FlutterError.presentError(details);
     };
   }
 

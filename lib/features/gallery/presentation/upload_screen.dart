@@ -127,7 +127,8 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           _parsingExif = false;
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('EXIF parse failed: $e');
       if (mounted) {
         setState(() {
           _parsedExif = null;
