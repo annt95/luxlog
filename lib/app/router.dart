@@ -17,11 +17,17 @@ import 'package:luxlog/features/tags/presentation/tag_feed_screen.dart';
 import 'package:luxlog/shared/widgets/main_scaffold.dart';
 
 import 'package:luxlog/core/services/supabase_service.dart';
+import 'package:luxlog/core/services/seo_service.dart';
 
 final router = GoRouter(
   initialLocation: '/',
   debugLogDiagnostics: false,
   redirect: (context, state) {
+    SeoService.applyForPath(
+      state.uri.path,
+      pathParameters: state.pathParameters,
+    );
+
     final session = SupabaseService.client.auth.currentSession;
     final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/signup';
 

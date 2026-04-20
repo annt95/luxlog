@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /upload
+Disallow: /notifications
+Disallow: /profile/edit
+Disallow: /login
+Disallow: /signup
+Sitemap: https://luxlog.vercel.app/sitemap.xml

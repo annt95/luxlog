@@ -2,6 +2,34 @@
   "buildCommand": "./vercel-build.sh",
   "outputDirectory": "build/web",
   "framework": null,
+  "rewrites": [
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
+      "source": "/photo/:photoId",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(googlebot|bingbot|twitterbot|facebookexternalhit|linkedinbot).*"
+        }
+      ],
+      "destination": "/api/seo/photo/:photoId"
+    },
+    {
+      "source": "/u/:username",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(googlebot|bingbot|twitterbot|facebookexternalhit|linkedinbot).*"
+        }
+      ],
+      "destination": "/api/seo/user/:username"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

@@ -1,11 +1,12 @@
 {
-    "name": "luxlog",
-    "short_name": "luxlog",
+    "name": "Luxlog - Film Photography Community",
+    "short_name": "Luxlog",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Nơi kể lại câu chuyện của ánh sáng.",
+    "background_color": "#0E0E0E",
+    "theme_color": "#0E0E0E",
+    "description": "Nơi kể lại câu chuyện của ánh sáng. Share and discover analog photography.",
+    "categories": ["photography", "social"],
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

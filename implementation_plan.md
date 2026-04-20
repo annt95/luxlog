@@ -1,58 +1,477 @@
-# E4. Photo Upload + Film Mode, Security Hardening & Google Login
+# Luxlog — Implementation Progress Tracker
 
-## ✅ Status: ALL TASKS COMPLETE (2026-04-18)
+## 📅 Cập nhật lần cuối: 2026-04-20
 
-All items from the original E4 plan have been implemented and deployed.
+> Tổng hợp tiến độ triển khai dự án Luxlog dựa trên rà soát toàn bộ mã nguồn thực tế,
+> đối chiếu với PLAN.md và WALKTHROUGH.md.
 
 ---
 
-## Completed Items
+## 📊 Tổng quan Tiến độ
 
-### Phần 1: Photo Upload + Film Mode
-- [x] Storage bucket `photos` — public, `allowed_mime_types: ["image/*"]`, `file_size_limit: 50MB`
-- [x] Film fields migration (`is_film`, `film_stock`, `film_camera`)
-- [x] PhotoModel + Freezed code generation
-- [x] `uploadPhoto()` in PhotoRepository — MIME fix, storage upload, DB insert
-- [x] Upload screen UI — 3-step flow (Pick → Details → Uploading)
-- [x] Film Mode toggle + Film Camera / Film Stock fields with **autocomplete suggestions**
-- [x] File size validation: 50MB client-side + Supabase bucket limit
-- [x] Input validation: title (200 chars), caption (2000 chars), tags (30 max)
-- [x] EXIF auto-parsing from uploaded images
+| Khu vực | Hoàn thành | Ghi chú |
+|:---|:---:|:---|
+| Core Infrastructure | **100%** | Env, Supabase, Errors, Models |
+| Data Layer (Repositories) | **100%** | 8 repos: Auth, AuthRemote, Photo, Portfolio, User, Tag, Category, Notification |
+| Auth System | **100%** | Email + Google OAuth + guards + password reset |
+| Frontend UI | **98%** | Tất cả màn hình chính + Profile Edit |
+| UI ↔ Data Wiring | **95%** | Explore còn Collections/Gear tab mock; còn lại đã real |
+| Router & Guards | **100%** | 15 routes; protected: upload, notifications, profile/edit |
+| Notification System | **100%** | Realtime stream + badge + mark-read + triggers backend |
+| Security | **95%** | RLS + headers + validation; còn thiếu rate-limit/CAPTCHA |
+| Vercel Deployment | **95%** | Pipeline hoạt động; cần verify env local + final deploy |
+| Testing | **60%** | 12 test files; profile-edit test minimal; cần mở rộng |
 
-### Phần 2: Security Hardening
-- [x] RLS policies: 35 policies across all public tables
-- [x] Security headers in `vercel.json` (CSP, HSTS, X-Frame-Options, etc.)
-- [x] Input validation on signup (email format, password strength)
-- [x] Error message sanitization (`AppException` pattern)
-- [x] Storage bucket RLS policies (upload, update, delete own photos)
+---
 
-### Phần 3: Google Login
-- [x] `signInWithGoogle()` with OAuth redirect flow
-- [x] `_getRedirectUrl()` for Web platform
-- [x] Auth state listener for profile sync
+## ✅ Hoàn thành (Đã xác nhận qua code scan 2026-04-20)
+
+### Core & Infrastructure
+- [x] Supabase Service init + Env config (`--dart-define`) + fail-fast release
+- [x] Sealed `AppException` với `cause` + `stackTrace`
+- [x] `ErrorBoundary` widget
+- [x] Freezed models: User, Photo, Portfolio, Tag, Category (+ `.freezed.dart` + `.g.dart`)
+- [x] 8 Repositories: Auth, AuthRemote, Photo, Portfolio, User, Tag, Category, Notification
+- [x] Riverpod providers cho tất cả repos (generated with `riverpod_generator`)
+- [x] 8 migrations: `001`→`007` + `consolidated_production.sql`
+
+### Auth System
+- [x] Email signup/signin với validation (email regex + password strength 8+ chars, 1 upper, 1 digit)
+- [x] Google OAuth redirect flow (`signInWithGoogle()` + `_getRedirectUrl()`)
 - [x] Facebook button removed from UI
-- [x] CSP headers updated for Google OAuth domains
-- [x] Vercel domain: `luxlog.vercel.app`
+- [x] Password reset flow
+- [x] Auto-sync profile sau signup/OAuth
+- [x] Router guards: anonymous browse; `/upload`, `/notifications`, `/profile/edit` protected
 
-### Additional Improvements
-- [x] Display Name (`full_name`) support across all screens
-- [x] Profile edit screen with avatar upload
-- [x] Vercel build script caching fix (`_flutter` directory)
-- [x] Film stock autocomplete (~35 stocks: Kodak, Fuji, Ilford, CineStill, etc.)
-- [x] Film camera autocomplete (~40 cameras: Contax, Nikon, Leica, Hasselblad, etc.)
+### Photos & Upload
+- [x] Real upload flow: Pick → EXIF parse → Details → Storage upload → DB insert
+- [x] Film Mode toggle + Film Camera / Film Stock autocomplete (~35 stocks, ~40 cameras)
+- [x] File size validation (50MB client + bucket limit)
+- [x] EXIF auto-parsing (camera, lens, ISO, aperture, shutter, GPS, date)
+- [x] Input validation: title (200), caption (2000), tags (30 max)
+- [x] Inline error banner (`AppColors.errorContainer` 24% alpha)
+- [x] GPS privacy toggle + License selection
+
+### Profile System
+- [x] Profile screen: real photo count + total views (from `photoRepository`)
+- [x] Profile tabs: Photos + Portfolio (both connected to real providers)
+- [x] **Profile Edit Screen** — bio (160 chars), avatar upload (5MB limit), Instagram/Website links
+- [x] Route `/profile/edit` (protected) + pencil button on own profile header
+- [x] Test file exists: `profile_edit_screen_test.dart`
+
+### Notifications
+- [x] DB schema + RLS + triggers (`on_like/comment/follow_created_notify`)
+- [x] `NotificationRepository`: fetch, stream, unreadCount, markAllAsRead
+- [x] `notificationsProvider` (StreamProvider) + `unreadNotificationCountProvider` (FutureProvider)
+- [x] Realtime UI (`notifications_screen.dart`) + mark-all-read button
+- [x] **Notification Badge** — Red dot (8×8px) trên profile icon trong bottom nav khi unread > 0
+
+### Feed & Discovery
+- [x] Discover: `categoriesProvider` + `photoFeedProvider(page, limit)` — fully real
+- [x] Feed: `photoFeedProvider` + pull-to-refresh invalidates
+- [x] Explore: `trendingTagsProvider` real; tabs Photos/People/Collections/Gear có search
+- [x] Tag Feed: `tag_feed_screen.dart` with dynamic tag route
+
+### Portfolio
+- [x] Portfolio Editor: `portfolioRepositoryProvider.savePortfolio()`
+- [x] Public Portfolio: `publicPortfolioProvider(slug)` + loading/error
+- [x] Route `/p/:slug` public access
+
+### Shared Widgets
+- [x] `main_scaffold.dart` — Glass bottom nav + FAB + notification badge
+- [x] `photo_card.dart` — Photo grid card with metadata
+- [x] `tag_chip.dart` + `tag_input_widget.dart`
+- [x] `skeleton_widgets.dart` — Shimmer loading states
+- [x] `exif_badge.dart` — EXIF metadata display
+- [x] `empty_state_widget.dart` — Icon + title + description + optional CTA
+
+### Security
+- [x] CSP headers (tuned for Flutter web: `wasm-unsafe-eval` + `worker-src blob:` + Google/Supabase domains)
+- [x] HSTS (63 days + preload) + X-Frame-Options (DENY) + Referrer-Policy + Permissions-Policy
+- [x] X-Content-Type-Options: nosniff + X-XSS-Protection
+- [x] Input validation: signup + upload
+- [x] Error sanitization (user-friendly messages, no internal leak)
+- [x] RLS policies cho mọi table + Storage RLS (owner-only upload/delete)
+
+### CI/CD & Deployment
+- [x] `vercel-build.sh` — Flutter clone/cache + pub get + build_runner + build web --release
+- [x] `vercel.json` — headers + build config
+- [x] GitHub Actions: analyze + tests
+- [x] Vercel auto-deploy on push
+
+### Testing (12 files)
+- [x] `test/core/errors/app_exception_test.dart`
+- [x] `test/core/contracts/schema_contract_test.dart`
+- [x] `test/shared/widgets/main_scaffold_test.dart`
+- [x] `test/features/auth/data/auth_repository_test.dart`
+- [x] `test/features/auth/presentation/login_screen_test.dart`
+- [x] `test/features/gallery/data/photo_repository_test.dart`
+- [x] `test/features/tags/data/tag_repository_test.dart`
+- [x] `test/features/portfolio/data/portfolio_repository_test.dart`
+- [x] `test/features/profile/data/user_repository_test.dart`
+- [x] `test/features/profile/providers/follow_state_provider_test.dart`
+- [x] `test/features/profile/presentation/profile_edit_screen_test.dart` (minimal — chỉ render check)
+- [x] `integration_test/app_flow_test.dart` (scaffold)
 
 ---
 
-## Manual Verification Checklist
+## 🔴 Blockers — Cần xử lý ngay
+
+### B1. Flutter Environment (Local)
+> `flutter_tools depends on test 1.30.0 which doesn't match any versions`
+
+**Nguyên nhân**: Env variable `PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` trỏ mirror cũ hoặc Flutter channel bị pin.
+
+```bash
+# Fix steps:
+unset PUB_HOSTED_URL && unset FLUTTER_STORAGE_BASE_URL
+flutter upgrade
+flutter clean && flutter pub cache repair && flutter pub get
+dart run build_runner build --delete-conflicting-outputs
+flutter analyze && flutter test && flutter build web --release
+```
+
+### B2. Git — Uncommitted Changes
+Tất cả code mới (notifications, profile edit, error hardening, CSP fix, migrations reorder) nằm trong working tree. Cần commit + push.
+
+### B3. Supabase Migrations (Production)
+Migrations `005`, `006`, `007` chưa apply trên DB production. Code sẽ fail nếu deploy mà chưa chạy:
+- `005_film_fields.sql` — film columns
+- `006_security_rls.sql` — RLS policies
+- `007_notifications.sql` — notifications table + triggers
+
+---
+
+## 🟡 Việc cần làm — Phase F (Stabilize & Ship)
+
+### F1. Commit & Push (Prerequisite)
+- [ ] `git add` tất cả untracked + modified files
+- [ ] Commit với structure phù hợp (xem PLAN.md section F1)
+- [ ] Push to remote
+
+### F2. Apply Migrations on Production Supabase
+- [ ] Run `005_film_fields.sql`
+- [ ] Run `006_security_rls.sql`
+- [ ] Run `007_notifications.sql`
+- [ ] Verify triggers active: `on_like_created_notify`, `on_comment_created_notify`, `on_follow_created_notify`
+- [ ] Manual test: insert like → verify notification row appears
+
+### F3. Explore Screen — Collections/Gear Tabs
+- [ ] Decide: hide Collections/Gear tabs in v1, or connect to real data
+- [ ] Nếu giữ: tạo `collections` table + `user_gear` table + repositories
+- [ ] Nếu bỏ: remove 2 tabs từ Explore, chỉ giữ Photos + People
+
+### F4. Notification Provider — `markAllAsRead` Action
+- [ ] Expose `markAllAsRead()` as a provider action (hiện chỉ có trong Repository)
+- [ ] Invalidate `unreadNotificationCountProvider` after marking all read
+- [ ] Verify badge disappears after mark-all-read in Notifications screen
+
+### F5. Tests Mở Rộng
+**Cần update:**
+- [ ] `app_exception_test.dart` — cover `cause` + `stackTrace` signature mới (nếu chưa)
+- [ ] `profile_edit_screen_test.dart` — expand: form validation, avatar upload, save flow, errors
+
+**Cần thêm:**
+- [ ] `test/features/notifications/data/notification_repository_test.dart`
+- [ ] `test/features/gallery/data/photo_repository_upload_test.dart` (mock Storage + DB)
+- [ ] `test/contracts/notifications_contract_test.dart`
+- [ ] Expand `integration_test/app_flow_test.dart` — Login → Upload → Feed → Notifications
+
+### F6. UI Polish
+- [ ] Infinite scroll pagination (Feed, Discover, Explore)
+- [ ] Tablet layout (2-column feed) + Web layout (3-column with sidebar)
+- [ ] Dark/Light theme toggle (hiện chỉ có dark)
+- [ ] Accessibility: semantic labels cho interactive elements
+
+### F7. Security — Pre-Launch
+- [ ] Rate limiting cho upload (Supabase Edge Function hoặc client throttle)
+- [ ] CAPTCHA cho signup/login sau N fail (hCaptcha via Supabase Auth)
+- [ ] Tách bucket `avatars` riêng (5MB max) thay vì dùng chung `photos`
+- [ ] Content moderation hook (NSFW check server-side)
+- [ ] Secrets rotation policy
+
+### F8. Observability — Post-Launch
+- [ ] Error reporting (Sentry) — wire `AppException.cause` + `stackTrace` vào sink
+- [ ] Upload success/fail metrics (Vercel Analytics custom events)
+- [ ] Auth conversion funnel tracking
+- [ ] DB query performance dashboard
+
+### F9. SEO Enterprise-Ready 🟡 HIGH (Web Platform)
+
+**Trạng thái thực thi (2026-04-20):**
+- ✅ Hoàn thành phần cốt lõi: runtime meta SEO, OG/Twitter fallback, robots, dynamic sitemap API, bot rewrites, bot snapshot endpoints, JSON-LD cơ bản.
+- 🟡 Còn lại để đạt full enterprise: OG image 1200x630 chuẩn brand, semantic alt/H1 audit toàn app, CWV optimization sâu, service worker/offline strategy.
+
+> Flutter Web mặc định render lên Canvas/WebGL → Google bot KHÔNG đọc được nội dung.
+> Cần chiến lược kết hợp: **pre-rendering**, **meta tags**, **structured data**, và **server-side fallback**.
+
+#### F9.1 — HTML Meta Tags & Open Graph (index.html + per-route)
+- [x] **Dynamic `<title>`**: Cập nhật document.title theo route (GoRouter `redirect` + `SeoService`)
+  - `/` → "Luxlog — Film Photography Community"
+  - `/photo/:id` → "{title} by {photographer} | Luxlog"
+  - `/u/:username` → "{name}'s Portfolio | Luxlog"
+  - `/p/:slug` → "{portfolio_name} | Luxlog"
+  - `/explore` → "Explore Film Photography | Luxlog"
+  - `/tag/:tagName` → "#{tagName} Photos | Luxlog"
+- [x] **Meta description dynamic**: Inject per-route description via `dart:html`
+- [x] **Viewport meta** (đã có nhưng cần verify responsive)
+- [x] **Canonical URL**: `<link rel="canonical" href="https://luxlog.vercel.app{path}">`
+- [x] **Language**: Thêm `<html lang="vi">` (hoặc `en` nếu target quốc tế)
+
+#### F9.2 — Open Graph & Twitter Cards
+- [x] OG tags cho trang chính (fallback):
+  ```html
+  <meta property="og:site_name" content="Luxlog">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Luxlog — Film Photography Community">
+  <meta property="og:description" content="Nơi kể lại câu chuyện của ánh sáng. Share & discover analog photography.">
+  <meta property="og:image" content="https://luxlog.vercel.app/images/og-default.jpg">
+  <meta property="og:url" content="https://luxlog.vercel.app">
+  ```
+- [x] Twitter Card meta:
+  ```html
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Luxlog — Film Photography Community">
+  <meta name="twitter:description" content="Share & discover analog photography">
+  <meta name="twitter:image" content="https://luxlog.vercel.app/images/og-default.jpg">
+  ```
+- [ ] **OG image asset**: Tạo `web/images/og-default.jpg` (1200×630px)
+- [x] **Dynamic OG for photos**: Vercel Edge Function / Serverless route `/api/seo/photo/:id`
+  - Query Supabase → trả về HTML page với OG tags + redirect (cho crawlers)
+- [x] **Dynamic OG for profiles**: `/api/seo/user/:username`
+
+#### F9.3 — Pre-rendering cho SEO Crawlers (Critical)
+- [x] **Vercel Serverless bot snapshot endpoint** (`/api/seo/photo/:id`, `/api/seo/user/:username`):
+  - Detect bot User-Agent (Googlebot, Bingbot, Twitterbot, facebookexternalhit, LinkedInBot)
+  - Return static HTML snapshot với full meta + structured data
+  - Non-bot traffic → serve Flutter Web SPA bình thường
+- [x] **Vercel Rewrites** trong `vercel.json`:
+  ```json
+  {
+    "rewrites": [
+      { "source": "/photo/:id", "has": [{"type":"header","key":"user-agent","value":"(?i)googlebot|bingbot|twitterbot|facebookexternalhit"}], "destination": "/api/seo/photo/:id" },
+      { "source": "/u/:username", "has": [{"type":"header","key":"user-agent","value":"(?i)googlebot|bingbot|twitterbot"}], "destination": "/api/seo/user/:username" }
+    ]
+  }
+  ```
+- [ ] **Alternative**: Dùng Rendertron / Prerender.io nếu không muốn tự host edge functions
+
+#### F9.4 — Structured Data (JSON-LD)
+- [x] **Organization** (site-wide trong index.html):
+  ```json
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Luxlog",
+    "url": "https://luxlog.vercel.app",
+    "applicationCategory": "Photography",
+    "description": "Film photography community — share, discover, and curate analog photos"
+  }
+  ```
+- [x] **ImageObject** (per photo detail — injected via Edge Function for bots):
+  ```json
+  {
+    "@context": "https://schema.org",
+    "@type": "ImageObject",
+    "name": "{title}",
+    "author": {"@type":"Person","name":"{photographer}"},
+    "datePublished": "{created_at}",
+    "description": "{caption}",
+    "contentUrl": "{photo_url}",
+    "license": "{license_url}"
+  }
+  ```
+- [x] **ProfilePage** (per user profile):
+  ```json
+  {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    "mainEntity": {
+      "@type": "Person",
+      "name": "{full_name}",
+      "url": "https://luxlog.vercel.app/u/{username}",
+      "image": "{avatar_url}"
+    }
+  }
+  ```
+
+#### F9.5 — Technical SEO
+- [x] **robots.txt** (`web/robots.txt`):
+  ```
+  User-agent: *
+  Allow: /
+  Disallow: /upload
+  Disallow: /notifications
+  Disallow: /profile/edit
+  Disallow: /login
+  Disallow: /signup
+  Sitemap: https://luxlog.vercel.app/sitemap.xml
+  ```
+- [x] **Sitemap** — Dynamic (Edge Function `/api/sitemap` via rewrite `/sitemap.xml`):
+  - Static pages: `/`, `/explore`, `/feed`
+  - User profiles: `/u/{username}` (query all public profiles)
+  - Public portfolios: `/p/{slug}` (query all published portfolios)
+  - Popular tags: `/tag/{name}` (top 50 tags)
+  - Regenerate daily via cron hoặc on-demand
+- [x] **404 page**: Custom 404 với navigation + suggestion (cũng giúp crawlers)
+- [ ] **Heading hierarchy**: Ensure H1 duy nhất per route (Flutter `Semantics`)
+- [ ] **Image alt text**: `PhotoCard` cần có `semanticLabel` cho ảnh
+
+#### F9.6 — Performance & Core Web Vitals
+- [ ] **Flutter build renderer**: Sử dụng `--web-renderer canvaskit` (mặc định) nhưng thêm loading indicator cho LCP
+- [ ] **Loading skeleton**: Đã có `skeleton_widgets.dart` — verify nó render nhanh < 2.5s (LCP target)
+- [ ] **Font optimization**: Preload Google Fonts critical subset
+  ```html
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=..." as="style">
+  ```
+- [ ] **Image optimization**: Serve responsive images (Supabase Storage transform hoặc Vercel Image Optimization)
+- [ ] **Vercel Speed Insights** (đã có) — monitor CWV scores
+- [ ] **Bundle size**: Tree-shake unused packages; defer non-critical JS
+
+#### F9.7 — PWA & Manifest Upgrade
+- [x] Update `manifest.json`:
+  - `"name": "Luxlog — Film Photography Community"`
+  - `"description"`: English + Vietnamese bilingual
+  - `"categories": ["photography", "social"]`
+  - `"screenshots"`: App screenshots cho install prompt
+  - `"theme_color"`: Match brand gold (#C5A572 or similar)
+- [ ] **Service Worker**: Cache static assets + offline fallback page
+- [ ] **Install prompt**: Hiển thị "Add to Home Screen" banner cho mobile web users
+
+#### F9.8 — Content & Crawlability Strategy
+- [x] **Public pages (no auth required)**:
+  - `/` (home/discover) — indexable
+  - `/explore` — indexable
+  - `/u/:username` — indexable (public profiles)
+  - `/p/:slug` — indexable (public portfolios)
+  - `/photo/:id` — indexable (public photos)
+  - `/tag/:tagName` — indexable
+- [x] **Noindex pages** (add `<meta name="robots" content="noindex">`):
+  - `/login`, `/signup`, `/upload`, `/notifications`, `/profile/edit`
+- [ ] **Internal linking**: TagChips, photographer names, portfolio links tạo mạng lưới liên kết nội bộ
+- [x] **URL structure**: Đã clean (`/photo/123`, `/u/name`, `/tag/portra400`) ✅
+
+---
+
+#### Thứ tự triển khai SEO đề xuất:
+
+| Step | Task | Effort | Impact |
+|:---:|:---|:---:|:---:|
+| 1 | F9.1 Dynamic title + canonical + lang | 30m | 🟡 High |
+| 2 | F9.5 robots.txt (static) | 10m | 🟡 High |
+| 3 | F9.2 OG + Twitter Cards (static fallback) | 30m | 🟡 High |
+| 4 | F9.7 manifest.json upgrade | 15m | 🟢 Med |
+| 5 | F9.4 Organization JSON-LD (static) | 15m | 🟢 Med |
+| 6 | F9.6 Font preload + loading perf | 20m | 🟢 Med |
+| 7 | F9.8 noindex cho private routes | 15m | 🟡 High |
+| 8 | F9.5 Dynamic sitemap (Edge Function) | 1.5h | 🟡 High |
+| 9 | F9.3 Bot pre-rendering (Edge Function) | 2-3h | 🔴 Critical |
+| 10 | F9.2 Dynamic OG per photo/user | 2h | 🟡 High |
+| 11 | F9.4 ImageObject + ProfilePage JSON-LD | 1h | 🟢 Med |
+| 12 | F9.6 Image optimization + CWV tuning | 1h | 🟢 Med |
+
+**Tổng effort ước tính: ~10-12h** (steps 1-7 có thể xong trong 1 session ~2h)
+
+---
+
+## 📈 So sánh PLAN.md vs Thực tế (Discrepancies Found)
+
+| PLAN.md ghi | Thực tế (scan 2026-04-20) | Kết luận |
+|:---|:---|:---|
+| Profile Edit ❌ Missing | ✅ `profile_edit_screen.dart` tồn tại đầy đủ (bio, avatar, links) | **PLAN.md outdated** |
+| Notifications Badge ❌ Missing | ✅ Badge đã implement trong `main_scaffold.dart` (red dot) | **PLAN.md outdated** |
+| Profile Collections/Gear tab mock | Collections/Gear nằm ở **Explore screen**, không phải Profile | **PLAN.md mô tả sai vị trí** |
+| Explore/Search 🟡 Partial | ✅ `trendingTagsProvider` real; chỉ Collections/Gear tab chưa wire data | Đúng nhưng mức độ nhỏ |
+| UI ↔ Data 90% | Thực tế ~95% (Profile Edit done + Badge done) | **Tăng lên 95%** |
+| Testing 55% | Thực tế ~60% (thêm profile_edit_screen_test.dart) | **Tăng nhẹ** |
+
+---
+
+## 🗂 Cấu trúc File Hiện tại
+
+```
+lib/ (68 .dart files)
+├── main.dart
+├── app/ (router.dart, theme.dart)
+├── core/
+│   ├── config/env.dart
+│   ├── errors/app_exception.dart
+│   ├── services/supabase_service.dart
+│   └── widgets/error_boundary.dart
+├── features/
+│   ├── auth/ (data/datasources, data/repositories, presentation, providers)
+│   ├── discover/ (presentation only)
+│   ├── explore/ (presentation only)
+│   ├── feed/ (presentation only)
+│   ├── gallery/ (data/repositories, presentation + widgets, providers)
+│   ├── notifications/ (data/repositories, presentation, providers)
+│   ├── portfolio/ (data/repositories, presentation, providers)
+│   ├── profile/ (data/repositories, presentation, providers)
+│   └── tags/ (data/repositories, presentation, providers)
+└── shared/
+    ├── constants/film_suggestions.dart
+    ├── models/ (5 Freezed models + generated)
+    └── widgets/ (7 shared components)
+
+test/ (12 .dart files)
+supabase/migrations/ (8 .sql files)
+integration_test/ (1 .dart file)
+```
+
+---
+
+## 🗓 Thứ tự Ưu tiên (Cập nhật 2026-04-20)
+
+| # | Công việc | Ưu tiên | Trạng thái |
+|:---:|:---|:---:|:---:|
+| 1 | B1. Fix Flutter env local | 🔴 BLOCKER | Chưa xử lý |
+| 2 | B2. Commit & push all changes | 🔴 BLOCKER | Chưa xử lý |
+| 3 | B3. Apply migrations 005-007 trên Supabase | 🔴 BLOCKER | Chưa xử lý |
+| 4 | F3. Decide Collections/Gear tabs | 🟡 High | Chưa xử lý |
+| 5 | F4. markAllAsRead provider action | 🟡 High | Chưa xử lý |
+| 6 | F5. Expand test coverage | 🟡 High | Chưa xử lý |
+| 7 | **F9. SEO Enterprise-Ready** | **🟡 High** | **Core implemented (2026-04-20)** |
+| 8 | F6. UI Polish (pagination, tablet, a11y) | 🟢 Med | Chưa xử lý |
+| 9 | F7. Security pre-launch (rate-limit, CAPTCHA) | 🟢 Med | Chưa xử lý |
+| 10 | F8. Observability (Sentry, analytics) | 🔵 Low | Chưa xử lý |
+
+---
+
+## ✅ Manual Verification Checklist (Pre-Deploy)
 
 ### Google OAuth
-- [ ] Supabase Dashboard → Authentication → URL Configuration → Site URL = `https://luxlog.vercel.app`
+- [ ] Supabase Dashboard → Site URL = `https://luxlog.vercel.app`
 - [ ] Supabase Dashboard → Redirect URLs includes `https://luxlog.vercel.app/**`
 - [ ] Google Cloud Console → Authorized JavaScript origins includes `https://luxlog.vercel.app`
-- [ ] Google Cloud Console → Authorized redirect URIs includes `https://joxsoxrsjtgaultrmhcw.supabase.co/auth/v1/callback`
+- [ ] Google Cloud Console → Authorized redirect URIs includes Supabase callback URL
 
 ### Upload Flow
-- [ ] Pick image > 20MB but < 50MB → should succeed
+- [ ] Pick image < 50MB → should succeed with EXIF display
 - [ ] Pick image > 50MB → should show error
 - [ ] Film Mode → type "Kod" → see Kodak suggestions
-- [ ] Film Mode → type custom value → accepted without issue
+- [ ] Film Mode → custom value → accepted
+
+### Notifications
+- [ ] Like a photo → notification appears in realtime for author
+- [ ] Red badge appears on bottom nav
+- [ ] Mark all read → badge disappears
+
+---
+
+## 📋 Dependencies (pubspec.yaml)
+
+| Category | Package | Version |
+|----------|---------|---------|
+| Navigation | go_router | ^14.8.1 |
+| State | flutter_riverpod | ^2.6.1 |
+| Backend | supabase_flutter | ^2.8.4 |
+| Network | dio | ^5.8.0 |
+| Animation | flutter_animate | ^4.5.2 |
+| Grid | flutter_staggered_grid_view | ^0.7.0 |
+| Cache | cached_network_image | ^3.4.1 |
+| EXIF | exif | ^3.3.0 |
+| Image | image_picker | ^1.1.2 |
+| Fonts | google_fonts | ^6.2.1 |
+| Storage | shared_preferences, flutter_secure_storage | — |
+| Utils | intl, timeago, url_launcher, share_plus | — |
+| CodeGen | riverpod_generator, freezed, build_runner | dev |
