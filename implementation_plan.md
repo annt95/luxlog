@@ -1,6 +1,6 @@
 # Luxlog — Implementation Progress Tracker
 
-## 📅 Cập nhật lần cuối: 2026-04-20 (Plans A+B+C + Plan F Social + Plan D A11y + Plan E Docs)
+## 📅 Cập nhật lần cuối: 2026-04-20 (Phase G Save/Bookmark + Phase H URL Optimization + Phase I Portfolio)
 
 > Tổng hợp tiến độ triển khai dự án Luxlog dựa trên rà soát toàn bộ mã nguồn thực tế,
 > đối chiếu với PLAN.md và WALKTHROUGH.md.
@@ -23,9 +23,11 @@
 | Testing | **80%** | 29 test files + 11 E2E specs; coverage + integration in CI |
 | SEO | **90%** | Runtime meta, OG, JSON-LD, sitemap, bot snapshot; pending prod QA gate |
 | Observability | **70%** | ErrorReporter + AppLogger + AnalyticsService + ErrorBoundary wired |
-| Social Features | **95%** | Navigation, Like, Follow, Comment, Share, Category Filter, Editor's Pick |
+| Social Features | **98%** | Navigation, Like, Follow, Comment, Share, Save/Bookmark, Category Filter, Editor's Pick |
 | Accessibility | **75%** | Semantic labels on nav, buttons, photo cards, tooltips on actions |
 | Documentation | **80%** | DATABASE.md, CONTRIBUTING.md, implementation_plan.md |
+| URL Optimization | **100%** | Path-based URLs (no hash), SPA fallback, OAuth code cleanup |
+| Portfolio Feature | **85%** | Editor + Public view + Real data dashboard + Delete/Preview wired |
 
 ---
 
@@ -38,7 +40,7 @@
 - [x] Freezed models: User, Photo, Portfolio, Tag, Category (+ `.freezed.dart` + `.g.dart`)
 - [x] 8 Repositories: Auth, AuthRemote, Photo, Portfolio, User, Tag, Category, Notification
 - [x] Riverpod providers cho tất cả repos (generated with `riverpod_generator`)
-- [x] 8 migrations: `001`→`007` + `consolidated_production.sql`
+- [x] 8 migrations: `001`→`007` + `consolidated_production.sql` + `008` (likes trigger) + `009` (saves) + `010` (portfolio update policy)
 
 ### Auth System
 - [x] Email signup/signin với validation (email regex + password strength 8+ chars, 1 upper, 1 digit)
