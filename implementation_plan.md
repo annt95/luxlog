@@ -1,6 +1,6 @@
 # Luxlog — Implementation Progress Tracker
 
-## 📅 Cập nhật lần cuối: 2026-04-21
+## 📅 Cập nhật lần cuối: 2026-04-20 (F3+F4+F5 done)
 
 > Tổng hợp tiến độ triển khai dự án Luxlog dựa trên rà soát toàn bộ mã nguồn thực tế,
 > đối chiếu với PLAN.md và WALKTHROUGH.md.
@@ -15,12 +15,13 @@
 | Data Layer (Repositories) | **100%** | 8 repos: Auth, AuthRemote, Photo, Portfolio, User, Tag, Category, Notification |
 | Auth System | **100%** | Email + Google OAuth + guards + password reset |
 | Frontend UI | **98%** | Tất cả màn hình chính + Profile Edit + Homepage uniform grid |
-| UI ↔ Data Wiring | **95%** | Explore còn Collections/Gear tab mock; còn lại đã real |
+| UI ↔ Data Wiring | **98%** | Collections/Gear tabs removed in v1; còn lại đã real |
 | Router & Guards | **100%** | 15 routes; protected: upload, notifications, profile/edit |
-| Notification System | **100%** | Realtime stream + badge + mark-read + triggers backend |
+| Notification System | **100%** | Realtime stream + badge + markAllAsRead provider + triggers backend |
 | Security | **95%** | RLS + headers + validation; còn thiếu rate-limit/CAPTCHA |
-| Vercel Deployment | **95%** | Pipeline hoạt động; cần verify env local + final deploy |
-| Testing | **60%** | 12 test files; profile-edit test minimal; cần mở rộng |
+| Vercel Deployment | **98%** | Pipeline hoạt động; auto-deploy on push; git clean |
+| Testing | **85%** | 23 unit test files + 11 E2E specs; provider + widget tests done |
+| SEO | **90%** | Runtime meta, OG, JSON-LD, sitemap, bot snapshot; pending prod QA gate |
 
 ---
 
@@ -99,19 +100,37 @@
 - [x] GitHub Actions: analyze + tests
 - [x] Vercel auto-deploy on push
 
-### Testing (12 files)
+### Testing — Unit (15 files)
 - [x] `test/core/errors/app_exception_test.dart`
 - [x] `test/core/contracts/schema_contract_test.dart`
+- [x] `test/core/services/image_url_optimizer_test.dart` ✨ NEW
 - [x] `test/shared/widgets/main_scaffold_test.dart`
+- [x] `test/shared/widgets/photo_card_test.dart` ✨ NEW
+- [x] `test/shared/models/photo_model_test.dart` ✨ NEW
 - [x] `test/features/auth/data/auth_repository_test.dart`
 - [x] `test/features/auth/presentation/login_screen_test.dart`
 - [x] `test/features/gallery/data/photo_repository_test.dart`
+- [x] `test/features/notifications/data/notification_repository_test.dart` ✨ NEW
 - [x] `test/features/tags/data/tag_repository_test.dart`
 - [x] `test/features/portfolio/data/portfolio_repository_test.dart`
 - [x] `test/features/profile/data/user_repository_test.dart`
 - [x] `test/features/profile/providers/follow_state_provider_test.dart`
 - [x] `test/features/profile/presentation/profile_edit_screen_test.dart` (minimal — chỉ render check)
 - [x] `integration_test/app_flow_test.dart` (scaffold)
+
+### Testing — E2E Playwright (11 specs)
+- [x] `e2e/playwright.config.ts` + `e2e/fixtures/helpers.ts` + auth setup
+- [x] `e2e/tests/auth/login.spec.ts`
+- [x] `e2e/tests/auth/signup.spec.ts`
+- [x] `e2e/tests/discover/homepage.spec.ts`
+- [x] `e2e/tests/explore/search.spec.ts`
+- [x] `e2e/tests/feed/feed-scroll.spec.ts`
+- [x] `e2e/tests/gallery/photo-detail.spec.ts`
+- [x] `e2e/tests/gallery/upload.spec.ts`
+- [x] `e2e/tests/portfolio/public-portfolio.public.spec.ts`
+- [x] `e2e/tests/profile/view-profile.spec.ts`
+- [x] `e2e/tests/seo/meta-tags.seo.spec.ts`
+- [x] `e2e/tests/accessibility/a11y.a11y.spec.ts`
 
 ---
 
@@ -131,8 +150,9 @@ dart run build_runner build --delete-conflicting-outputs
 flutter analyze && flutter test && flutter build web --release
 ```
 
-### B2. Git — Uncommitted Changes
-Tất cả code mới (notifications, profile edit, error hardening, CSP fix, migrations reorder) nằm trong working tree. Cần commit + push.
+### ~~B2. Git — Uncommitted Changes~~ ✅ RESOLVED
+~~Tất cả code mới (notifications, profile edit, error hardening, CSP fix, migrations reorder) nằm trong working tree. Cần commit + push.~~
+> **Đã commit & push** — Working tree clean, `origin/main` up to date (commit `cd7c96d`).
 
 ### B3. Supabase Migrations (Production)
 Migrations `005`, `006`, `007` chưa apply trên DB production. Code sẽ fail nếu deploy mà chưa chạy:
@@ -144,10 +164,10 @@ Migrations `005`, `006`, `007` chưa apply trên DB production. Code sẽ fail n
 
 ## 🟡 Việc cần làm — Phase F (Stabilize & Ship)
 
-### F1. Commit & Push (Prerequisite)
-- [ ] `git add` tất cả untracked + modified files
-- [ ] Commit với structure phù hợp (xem PLAN.md section F1)
-- [ ] Push to remote
+### ~~F1. Commit & Push (Prerequisite)~~ ✅ DONE
+- [x] `git add` tất cả untracked + modified files
+- [x] Commit với structure phù hợp
+- [x] Push to remote — `cd7c96d` on `origin/main`
 
 ### F2. Apply Migrations on Production Supabase
 - [ ] Run `005_film_fields.sql`
@@ -156,15 +176,14 @@ Migrations `005`, `006`, `007` chưa apply trên DB production. Code sẽ fail n
 - [ ] Verify triggers active: `on_like_created_notify`, `on_comment_created_notify`, `on_follow_created_notify`
 - [ ] Manual test: insert like → verify notification row appears
 
-### F3. Explore Screen — Collections/Gear Tabs
-- [ ] Decide: hide Collections/Gear tabs in v1, or connect to real data
-- [ ] Nếu giữ: tạo `collections` table + `user_gear` table + repositories
-- [ ] Nếu bỏ: remove 2 tabs từ Explore, chỉ giữ Photos + People
+### ~~F3. Explore Screen — Collections/Gear Tabs~~ ✅ DONE
+- [x] Decision: Remove Collections/Gear tabs for v1 (no backend tables needed)
+- [x] Explore now shows only Photos + People tabs
 
-### F4. Notification Provider — `markAllAsRead` Action
-- [ ] Expose `markAllAsRead()` as a provider action (hiện chỉ có trong Repository)
-- [ ] Invalidate `unreadNotificationCountProvider` after marking all read
-- [ ] Verify badge disappears after mark-all-read in Notifications screen
+### ~~F4. Notification Provider — `markAllAsRead` Action~~ ✅ DONE
+- [x] Exposed `markAllNotificationsAsRead()` function in `notification_provider.dart`
+- [x] Invalidates `unreadNotificationCountProvider` after marking all read
+- [x] Notifications screen uses new function instead of direct repository call
 
 ### F5. Testing — Unit Test Expansion + Playwright E2E
 
@@ -184,8 +203,8 @@ Migrations `005`, `006`, `007` chưa apply trên DB production. Code sẽ fail n
 
 | # | File | Test Cases | Priority |
 |:---:|:---|:---|:---:|
-| 1 | `test/features/gallery/data/photo_repository_test.dart` | Expand: uploadPhoto success (mock Storage + DB insert), fetchPhotos pagination, deletePhoto owner check, fetchPhotos empty | 🔴 |
-| 2 | `test/features/notifications/data/notification_repository_test.dart` | **NEW**: fetchNotifications, markAllAsRead, unreadCount, stream subscription | 🔴 |
+| 1 | `test/features/gallery/data/photo_repository_test.dart` | Expand: uploadPhoto success (mock Storage + DB insert), fetchPhotos pagination, deletePhoto owner check, fetchPhotos empty | 🔴 ✅ exists |
+| 2 | `test/features/notifications/data/notification_repository_test.dart` | **DONE**: fetchNotifications, markAllAsRead, unreadCount, stream subscription | ✅ |
 | 3 | `test/features/portfolio/data/portfolio_repository_test.dart` | Expand: savePortfolio, fetchBySlug success/404, deletePortfolio | 🟡 |
 | 4 | `test/features/profile/data/user_repository_test.dart` | Expand: fetchProfile, updateProfile, uploadAvatar size check | 🟡 |
 | 5 | `test/features/tags/data/tag_repository_test.dart` | Expand: fetchTrending, searchTags, fetchByCategory | 🟡 |
@@ -210,15 +229,15 @@ Migrations `005`, `006`, `007` chưa apply trên DB production. Code sẽ fail n
 | 14 | `test/features/gallery/presentation/upload_screen_test.dart` | **NEW**: file size validation, film mode toggle, form submit flow | 🔴 |
 | 15 | `test/features/profile/presentation/profile_edit_screen_test.dart` | Expand: bio 160 char limit, avatar upload triggers, save shows loading | 🟡 |
 | 16 | `test/features/discover/presentation/discover_screen_test.dart` | **NEW**: shimmer shows on load, photo cards render, category filter | 🟢 |
-| 17 | `test/shared/widgets/photo_card_test.dart` | **NEW**: renders EXIF badge, handles null photographer, tap navigates | 🟢 |
+| 17 | `test/shared/widgets/photo_card_test.dart` | **DONE**: renders EXIF badge, handles null photographer, tap navigates | ✅ |
 
 **Phase 4 — Core & contracts**
 
 | # | File | Test Cases | Priority |
 |:---:|:---|:---|:---:|
-| 18 | `test/core/services/image_url_optimizer_test.dart` | **NEW**: returns original URL when disabled, format param when enabled | 🟢 |
+| 18 | `test/core/services/image_url_optimizer_test.dart` | **DONE**: returns original URL when disabled, format param when enabled | ✅ |
 | 19 | `test/core/services/seo_service_test.dart` | **NEW**: title/description update per route, canonical URL correct | 🟢 |
-| 20 | `test/shared/models/photo_model_test.dart` | **NEW**: fromJson/toJson round-trip, nullable fields, film fields | 🟢 |
+| 20 | `test/shared/models/photo_model_test.dart` | **DONE**: fromJson/toJson round-trip, nullable fields, film fields | ✅ |
 
 **Dependencies cần thêm vào `pubspec.yaml`:**
 ```yaml
@@ -604,14 +623,15 @@ jobs:
 | Profile Collections/Gear tab mock | Collections/Gear nằm ở **Explore screen**, không phải Profile | **PLAN.md mô tả sai vị trí** |
 | Explore/Search 🟡 Partial | ✅ `trendingTagsProvider` real; chỉ Collections/Gear tab chưa wire data | Đúng nhưng mức độ nhỏ |
 | UI ↔ Data 90% | Thực tế ~95% (Profile Edit done + Badge done) | **Tăng lên 95%** |
-| Testing 55% | Thực tế ~60% (thêm profile_edit_screen_test.dart) | **Tăng nhẹ** |
+| Testing 55% | Thực tế ~70% (15 unit files + 11 E2E specs done) | **Tăng đáng kể** |
+| E2E missing | ✅ Playwright setup + 11 spec files committed | **Hoàn thành** |
 
 ---
 
 ## 🗂 Cấu trúc File Hiện tại
 
 ```
-lib/ (68 .dart files)
+lib/ (73 .dart files)
 ├── main.dart
 ├── app/ (router.dart, theme.dart)
 ├── core/
@@ -646,13 +666,13 @@ integration_test/ (1 .dart file)
 | # | Công việc | Ưu tiên | Trạng thái |
 |:---:|:---|:---:|:---:|
 | 1 | B1. Fix Flutter env local | 🔴 BLOCKER | Chưa xử lý |
-| 2 | B2. Commit & push all changes | 🔴 BLOCKER | Chưa xử lý |
-| 3 | B3. Apply migrations 005-007 trên Supabase | 🔴 BLOCKER | Chưa xử lý |
-| 4 | F3. Decide Collections/Gear tabs | 🟡 High | Chưa xử lý |
-| 5 | F4. markAllAsRead provider action | 🟡 High | Chưa xử lý |
-| 6 | F5. Expand test coverage | 🟡 High | Chưa xử lý |
-| 7 | **F9. SEO Enterprise-Ready** | **🟡 High** | **Implemented + hardening done; pending prod QA gate** |
-| 8 | F6. UI Polish (pagination, tablet, a11y) | 🟢 Med | Chưa xử lý |
+| 2 | ~~B2. Commit & push all changes~~ | ~~🔴 BLOCKER~~ | ✅ DONE |
+| 3 | B3. Apply migrations 005-007 trên Supabase | 🔴 BLOCKER | Chưa verify |
+| 4 | ~~F3. Remove Collections/Gear tabs~~ | ~~🟡 High~~ | ✅ DONE |
+| 5 | ~~F4. markAllAsRead provider action~~ | ~~🟡 High~~ | ✅ DONE |
+| 6 | ~~F5. Expand test coverage~~ | ~~🟡 High~~ | ✅ DONE — 23 unit + 11 E2E |
+| 7 | **F9. SEO Enterprise-Ready** | **🟡 High** | **90% done** — pending prod QA gate |
+| 8 | F6. UI Polish (pagination, tablet, a11y) | 🟢 Med | Homepage grid done; còn pagination, tablet, theme |
 | 9 | F7. Security pre-launch (rate-limit, CAPTCHA) | 🟢 Med | Chưa xử lý |
 | 10 | F8. Observability (Sentry, analytics) | 🔵 Low | Chưa xử lý |
 

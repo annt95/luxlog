@@ -26,7 +26,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   bool _searching = false;
   String _query = '';
 
-  static const _tabs = ['Photos', 'People', 'Collections', 'Gear'];
+  static const _tabs = ['Photos', 'People'];
 
   static const _genres = [
     ('Portrait', Icons.person_outline, 'https://picsum.photos/seed/g1/300/300'),

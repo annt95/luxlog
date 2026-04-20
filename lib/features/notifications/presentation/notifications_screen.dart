@@ -38,9 +38,7 @@ class NotificationsScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () async {
-              await ref
-                  .read(notificationRepositoryProvider)
-                  .markAllAsRead(user.id);
+              await markAllNotificationsAsRead(ref, user.id);
             },
             child: const Text('Mark all read'),
           ),

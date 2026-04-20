@@ -15,3 +15,10 @@ final unreadNotificationCountProvider = FutureProvider.family<int, String>((ref,
   final repository = ref.watch(notificationRepositoryProvider);
   return repository.unreadCount(userId);
 });
+
+/// Marks all notifications as read for [userId] and refreshes the unread badge.
+Future<void> markAllNotificationsAsRead(WidgetRef ref, String userId) async {
+  final repository = ref.read(notificationRepositoryProvider);
+  await repository.markAllAsRead(userId);
+  ref.invalidate(unreadNotificationCountProvider);
+}
