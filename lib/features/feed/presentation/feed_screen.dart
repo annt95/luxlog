@@ -437,7 +437,7 @@ class _PostCardState extends State<_PostCard> {
 
   void _sharePost() {
     final url = 'https://luxlog.app/photo/${widget.post.id}';
-    SharePlus.instance.share(ShareParams(text: '${widget.post.caption}\n$url'));
+    Share.share('${widget.post.caption}\n$url');
   }
 
   void _toggleSave() {

@@ -77,7 +77,7 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
 
   void _sharePhoto(String title, String photoId) {
     final url = 'https://luxlog.app/photo/$photoId';
-    SharePlus.instance.share(ShareParams(text: '$title\n$url'));
+    Share.share('$title\n$url');
   }
 
   Future<void> _toggleSave(String photoId) async {
@@ -131,14 +131,14 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
 
           // Load follow state from server
           if (userId.isNotEmpty) {
-            ref.listen(followStateProvider(userId), (_, next) {
+            ref.listen(photoFollowStateProvider(userId), (_, next) {
               next.whenData((following) {
                 if (_followLoading) {
                   setState(() { _following = following; _followLoading = false; });
                 }
               });
             });
-            ref.watch(followStateProvider(userId));
+            ref.watch(photoFollowStateProvider(userId));
           }
 
           // Load save state from server

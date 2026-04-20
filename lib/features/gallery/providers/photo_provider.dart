@@ -29,7 +29,7 @@ final photoLikeStateProvider = FutureProvider.autoDispose.family<bool, String>((
   return repository.hasLiked(photoId);
 });
 
-final followStateProvider = FutureProvider.autoDispose.family<bool, String>((ref, targetUserId) {
+final photoFollowStateProvider = FutureProvider.autoDispose.family<bool, String>((ref, targetUserId) {
   final repository = ref.watch(photoRepositoryProvider);
   return repository.isFollowing(targetUserId);
 });
