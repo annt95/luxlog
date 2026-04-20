@@ -118,7 +118,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 height: 36,
                 child: ref.watch(trendingTagsProvider).when(
                   data: (tags) {
-                    final tagNames = tags.map((t) => t['name'] as String).toList();
+                    final tagNames = tags
+                        .map((t) => t['name'] as String?)
+                        .whereType<String>()
+                        .toList();
                     return ListView.separated(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 12),

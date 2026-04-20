@@ -357,7 +357,8 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                                 .read(tagRepositoryProvider)
                                 .searchTags(query);
                             return results
-                                .map((tag) => tag['name'] as String)
+                                .map((tag) => tag['name'] as String?)
+                                .whereType<String>()
                                 .toList();
                           },
                           shareGps: _shareGps,
@@ -723,7 +724,7 @@ class _DetailsStep extends StatelessWidget {
                   runSpacing: 6,
                   children: [
                     ...categories.map((cat) {
-                      final categoryId = cat['id'] as String;
+                      final categoryId = cat['id'] as String? ?? '';
                       final categoryName = cat['name'] as String? ?? 'Unknown';
                       final isSelected = selectedCategories.contains(categoryId);
                       return TagChip(

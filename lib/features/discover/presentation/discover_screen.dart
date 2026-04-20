@@ -263,11 +263,12 @@ class _GlassAppBarDelegate extends SliverPersistentHeaderDelegate {
                   ref.watch(currentUserProfileProvider).when(
                         data: (profile) {
                           final name = profile['full_name'] as String? ?? profile['username'] as String? ?? 'U';
+                          final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
                           return CircleAvatar(
                             radius: 16,
                             backgroundColor: AppColors.primaryContainer,
                             child: Text(
-                              name[0].toUpperCase(),
+                              initial,
                               style: AppTextStyles.exifData.copyWith(
                                 color: AppColors.primary,
                               ),

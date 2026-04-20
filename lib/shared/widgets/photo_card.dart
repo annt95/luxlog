@@ -108,6 +108,7 @@ class _PhotoCardState extends State<PhotoCard> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                 // ── Image ─────────────────────────────────
@@ -183,7 +184,9 @@ class _PhotoCardState extends State<PhotoCard> {
                             : null,
                         child: widget.photographerAvatar == null
                             ? Text(
-                                widget.photographerName[0].toUpperCase(),
+                                widget.photographerName.isNotEmpty
+                                    ? widget.photographerName[0].toUpperCase()
+                                    : '?',
                                 style: AppTextStyles.exifLabel.copyWith(
                                   color: AppColors.primary,
                                 ),

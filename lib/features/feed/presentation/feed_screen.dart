@@ -157,7 +157,7 @@ class _MockPost {
     final username = profile?['username'] as String? ?? 'photographer';
     final fullName = profile?['full_name'] as String?;
     final title = row['title'] as String? ?? '';
-    final caption = row['caption'] as String? ?? row['description'] as String? ?? '';
+    final caption = row['caption'] as String? ?? (row['description'] is String ? row['description'] as String : '');
     final camera = row['camera'] as String? ?? 'Camera';
     final focalLength = row['focal_length'] as String?;
     final aperture = row['aperture'] as String?;
@@ -363,7 +363,7 @@ class _StoryBubble extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          name.split(' ').first,
+          name.isNotEmpty ? name.split(' ').first : 'User',
           style: AppTextStyles.caption,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -499,7 +499,7 @@ class _PostHeader extends StatelessWidget {
             child: CircleAvatar(
               backgroundColor: AppColors.surfaceContainerHigh,
               child: Text(
-                post.displayName[0],
+                post.displayName.isNotEmpty ? post.displayName[0] : '?',
                 style: AppTextStyles.label.copyWith(color: AppColors.primary),
               ),
             ),

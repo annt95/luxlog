@@ -85,10 +85,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         return FutureBuilder<List<int>>(
           future: statsFuture,
           builder: (context, statsSnapshot) {
-            final photoCount = statsSnapshot.data?.first ?? 0;
-            final viewsCount = statsSnapshot.data?.length == 2
-                ? statsSnapshot.data![1]
-                : 0;
+            final stats = statsSnapshot.data;
+            final photoCount = (stats != null && stats.isNotEmpty) ? stats[0] : 0;
+            final viewsCount = (stats != null && stats.length >= 2) ? stats[1] : 0;
 
             return Scaffold(
               backgroundColor: AppColors.background,
