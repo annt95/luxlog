@@ -166,16 +166,216 @@ Migrations `005`, `006`, `007` chưa apply trên DB production. Code sẽ fail n
 - [ ] Invalidate `unreadNotificationCountProvider` after marking all read
 - [ ] Verify badge disappears after mark-all-read in Notifications screen
 
-### F5. Tests Mở Rộng
-**Cần update:**
-- [ ] `app_exception_test.dart` — cover `cause` + `stackTrace` signature mới (nếu chưa)
-- [ ] `profile_edit_screen_test.dart` — expand: form validation, avatar upload, save flow, errors
+### F5. Testing — Unit Test Expansion + Playwright E2E
 
-**Cần thêm:**
-- [ ] `test/features/notifications/data/notification_repository_test.dart`
-- [ ] `test/features/gallery/data/photo_repository_upload_test.dart` (mock Storage + DB)
-- [ ] `test/contracts/notifications_contract_test.dart`
-- [ ] Expand `integration_test/app_flow_test.dart` — Login → Upload → Feed → Notifications
+> **Mục tiêu**: Nâng test coverage từ ~25% lên 75%+ (unit) và có E2E regression suite chạy được trên CI.
+
+---
+
+#### F5-A. UNIT TESTS — Mở rộng (Flutter `flutter_test` + `mocktail`)
+
+**Nguyên tắc:**
+- Mỗi repository phải có ≥3 test cases (happy path, error path, edge case)
+- Mỗi provider phải test state transitions
+- Widget tests cho interactive flows (form submit, navigation, error display)
+- Mock tất cả Supabase calls (không hit network)
+
+**Phase 1 — Repository layer (Critical, chạy nhanh nhất)**
+
+| # | File | Test Cases | Priority |
+|:---:|:---|:---|:---:|
+| 1 | `test/features/gallery/data/photo_repository_test.dart` | Expand: uploadPhoto success (mock Storage + DB insert), fetchPhotos pagination, deletePhoto owner check, fetchPhotos empty | 🔴 |
+| 2 | `test/features/notifications/data/notification_repository_test.dart` | **NEW**: fetchNotifications, markAllAsRead, unreadCount, stream subscription | 🔴 |
+| 3 | `test/features/portfolio/data/portfolio_repository_test.dart` | Expand: savePortfolio, fetchBySlug success/404, deletePortfolio | 🟡 |
+| 4 | `test/features/profile/data/user_repository_test.dart` | Expand: fetchProfile, updateProfile, uploadAvatar size check | 🟡 |
+| 5 | `test/features/tags/data/tag_repository_test.dart` | Expand: fetchTrending, searchTags, fetchByCategory | 🟡 |
+| 6 | `test/features/auth/data/auth_repository_test.dart` | Already good — add: Google OAuth flow mock, password reset | 🟢 |
+
+**Phase 2 — Provider layer (State management logic)**
+
+| # | File | Test Cases | Priority |
+|:---:|:---|:---|:---:|
+| 7 | `test/features/gallery/providers/photo_provider_test.dart` | **NEW**: photoFeedProvider loading→data→error, pagination state, invalidate on upload | 🔴 |
+| 8 | `test/features/notifications/providers/notification_provider_test.dart` | **NEW**: stream emits updates, unreadCount reactive, markRead updates state | 🔴 |
+| 9 | `test/features/portfolio/providers/portfolio_provider_test.dart` | **NEW**: fetch portfolios list, create/save state | 🟡 |
+| 10 | `test/features/auth/providers/auth_provider_test.dart` | **NEW**: authStateChanges, signOut clears state, currentUser reactivity | 🟡 |
+| 11 | `test/features/tags/providers/tag_provider_test.dart` | **NEW**: trending tags load, category filter | 🟢 |
+
+**Phase 3 — Widget tests (UI interaction logic)**
+
+| # | File | Test Cases | Priority |
+|:---:|:---|:---|:---:|
+| 12 | `test/features/auth/presentation/login_screen_test.dart` | Expand: validation messages, submit disabled when empty, error banner on fail | 🟡 |
+| 13 | `test/features/auth/presentation/signup_screen_test.dart` | **NEW**: password strength validation, email format, confirm match | 🟡 |
+| 14 | `test/features/gallery/presentation/upload_screen_test.dart` | **NEW**: file size validation, film mode toggle, form submit flow | 🔴 |
+| 15 | `test/features/profile/presentation/profile_edit_screen_test.dart` | Expand: bio 160 char limit, avatar upload triggers, save shows loading | 🟡 |
+| 16 | `test/features/discover/presentation/discover_screen_test.dart` | **NEW**: shimmer shows on load, photo cards render, category filter | 🟢 |
+| 17 | `test/shared/widgets/photo_card_test.dart` | **NEW**: renders EXIF badge, handles null photographer, tap navigates | 🟢 |
+
+**Phase 4 — Core & contracts**
+
+| # | File | Test Cases | Priority |
+|:---:|:---|:---|:---:|
+| 18 | `test/core/services/image_url_optimizer_test.dart` | **NEW**: returns original URL when disabled, format param when enabled | 🟢 |
+| 19 | `test/core/services/seo_service_test.dart` | **NEW**: title/description update per route, canonical URL correct | 🟢 |
+| 20 | `test/shared/models/photo_model_test.dart` | **NEW**: fromJson/toJson round-trip, nullable fields, film fields | 🟢 |
+
+**Dependencies cần thêm vào `pubspec.yaml`:**
+```yaml
+dev_dependencies:
+  # Existing: flutter_test, mocktail, integration_test
+  fake_async: ^1.3.1          # Time-based testing (debounce, stream)
+  riverpod_test: ^0.1.0        # Provider test utilities (nếu có)
+```
+
+**Target output**: ~40 test files, ~2000+ lines of tests, >75% branch coverage trên data + provider layers.
+
+---
+
+#### F5-B. PLAYWRIGHT E2E — Setup + Test Suite (Web)
+
+**Mục tiêu**: Browser-based regression tests chạy trên deployed site (https://luxlog.vercel.app) hoặc local Flutter web server.
+
+**Tech stack:**
+- Playwright (TypeScript) — cross-browser (Chromium, Firefox, WebKit)
+- `@playwright/test` runner
+- Page Object Model pattern
+- CI: GitHub Actions triggered on push/PR
+
+**Phase 1 — Setup & Infrastructure**
+
+```
+e2e/
+├── playwright.config.ts       # Config: baseURL, browsers, timeouts
+├── package.json               # Playwright deps
+├── tsconfig.json              # TypeScript config
+├── pages/                     # Page Object Models
+│   ├── login.page.ts
+│   ├── signup.page.ts
+│   ├── discover.page.ts
+│   ├── feed.page.ts
+│   ├── explore.page.ts
+│   ├── upload.page.ts
+│   ├── photo-detail.page.ts
+│   ├── profile.page.ts
+│   └── portfolio.page.ts
+├── fixtures/                  # Test fixtures & helpers
+│   ├── auth.fixture.ts        # Login state save/restore
+│   └── test-data.ts           # Test account credentials (from env)
+├── tests/
+│   ├── auth/
+│   │   ├── login.spec.ts
+│   │   ├── signup.spec.ts
+│   │   └── oauth.spec.ts
+│   ├── discover/
+│   │   ├── homepage.spec.ts
+│   │   └── category-filter.spec.ts
+│   ├── gallery/
+│   │   ├── upload.spec.ts
+│   │   ├── photo-detail.spec.ts
+│   │   └── photo-actions.spec.ts
+│   ├── feed/
+│   │   └── feed-scroll.spec.ts
+│   ├── explore/
+│   │   └── search.spec.ts
+│   ├── profile/
+│   │   ├── view-profile.spec.ts
+│   │   └── edit-profile.spec.ts
+│   ├── portfolio/
+│   │   └── public-portfolio.spec.ts
+│   ├── seo/
+│   │   ├── meta-tags.spec.ts
+│   │   └── og-images.spec.ts
+│   └── accessibility/
+│       └── a11y.spec.ts
+└── .env.example               # E2E_BASE_URL, E2E_TEST_EMAIL, E2E_TEST_PASSWORD
+```
+
+**Phase 2 — Test Scenarios (Priority order)**
+
+| # | Test file | Scenarios | Priority |
+|:---:|:---|:---|:---:|
+| 1 | `auth/login.spec.ts` | Navigate to login, fill form, submit, verify redirect to discover; invalid creds show error; empty form validation | 🔴 |
+| 2 | `discover/homepage.spec.ts` | Page loads with photos, masonry grid visible, EXIF badge on cards, category tabs clickable, click photo → detail | 🔴 |
+| 3 | `gallery/upload.spec.ts` | Login → navigate upload → select file → fill title → submit → verify success redirect; film mode toggle changes form | 🔴 |
+| 4 | `gallery/photo-detail.spec.ts` | Photo page loads, image visible, EXIF data shown, like button works, comments section exists | 🔴 |
+| 5 | `auth/signup.spec.ts` | Signup form validation (weak password, invalid email), successful signup | 🟡 |
+| 6 | `feed/feed-scroll.spec.ts` | Feed loads posts, "For You"/"Following" tabs switch, pull-to-refresh works | 🟡 |
+| 7 | `explore/search.spec.ts` | Trending tags visible, search input works, tag click → tag feed | 🟡 |
+| 8 | `profile/view-profile.spec.ts` | Profile page loads, photo count visible, tabs work, follow button | 🟡 |
+| 9 | `profile/edit-profile.spec.ts` | Edit form loads prefilled, save bio, avatar upload | 🟡 |
+| 10 | `portfolio/public-portfolio.spec.ts` | `/p/:slug` loads, photos grid visible, public (no auth required) | 🟢 |
+| 11 | `seo/meta-tags.spec.ts` | Verify `<title>`, `og:title`, `canonical`, `description` on key pages | 🟢 |
+| 12 | `seo/og-images.spec.ts` | Bot UA request → returns OG meta HTML (curl-style with page.request) | 🟢 |
+| 13 | `accessibility/a11y.spec.ts` | axe-core scan on discover + upload + profile (no critical violations) | 🟢 |
+
+**Phase 3 — CI Integration (GitHub Actions)**
+
+```yaml
+# .github/workflows/e2e.yml
+name: E2E Tests
+on: [push, pull_request]
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: cd e2e && npm ci
+      - run: cd e2e && npx playwright install --with-deps
+      - run: cd e2e && npx playwright test
+        env:
+          E2E_BASE_URL: https://luxlog.vercel.app
+          E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+          E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+```
+
+**Phase 4 — Auth State Management**
+
+```typescript
+// fixtures/auth.fixture.ts
+// Save authenticated browser state to reuse across tests
+// → Login once, save storageState, reuse in all authenticated tests
+// → Avoids login overhead per test (Playwright best practice)
+```
+
+**Lưu ý quan trọng:**
+- Cần 1 test account trên Supabase production (hoặc staging) — email: `e2e-test@luxlog.app`
+- Không bao giờ hardcode credentials — dùng `process.env` + GitHub Secrets
+- Flutter Web dùng CanvasKit → Playwright chọ elements bằng `text=`, `role=`, hoặc `data-testid` khi cần
+- CanvasKit render lên canvas → một số selector DOM thông thường sẽ KHÔNG hoạt động. Cần dùng:
+  - `page.getByText()` cho text-based elements
+  - `page.locator('flt-semantics-*')` cho Flutter semantic tree
+  - Visual regression với `expect(page).toHaveScreenshot()` là backup khi DOM không accessible
+
+---
+
+#### F5-C. Thứ tự triển khai & Effort
+
+| Step | Scope | Effort | Deliverable |
+|:---:|:---|:---:|:---|
+| 1 | Unit Phase 1: Repository tests (6 files) | 3h | 6 files, ~60 test cases |
+| 2 | Unit Phase 2: Provider tests (5 files) | 2h | 5 files, ~30 test cases |
+| 3 | Unit Phase 3: Widget tests (6 files) | 2.5h | 6 files, ~35 test cases |
+| 4 | Unit Phase 4: Core + models (3 files) | 1h | 3 files, ~15 test cases |
+| 5 | Playwright setup (config + POM + fixtures) | 1.5h | e2e/ scaffold ready |
+| 6 | Playwright Phase 2: Auth + Discover + Upload | 2h | 4 spec files |
+| 7 | Playwright Phase 2: Feed + Explore + Profile | 2h | 5 spec files |
+| 8 | Playwright Phase 3: SEO + A11y + CI pipeline | 1.5h | 3 spec files + workflow |
+| | **Tổng** | **~15.5h** | **~40 unit files + 13 E2E specs** |
+
+#### F5-D. Definition of Done
+- [ ] `flutter test` passes 100% — no skipped tests
+- [ ] Coverage report: ≥75% lines trên `lib/features/*/data/` và `lib/features/*/providers/`
+- [ ] `npx playwright test` green trên Chromium + Firefox
+- [ ] GitHub Actions CI passes cho cả unit + E2E
+- [ ] No flaky tests (retry 2x policy for E2E, 0 retries for unit)
 
 ### F6. UI Polish
 - [ ] Infinite scroll pagination (Feed, Discover, Explore)

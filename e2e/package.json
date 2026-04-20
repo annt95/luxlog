@@ -1,0 +1,18 @@
+{
+  "name": "luxlog-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright E2E tests for Luxlog",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:headed": "npx playwright test --headed",
+    "test:ui": "npx playwright test --ui",
+    "test:chromium": "npx playwright test --project=chromium",
+    "test:firefox": "npx playwright test --project=firefox",
+    "report": "npx playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@axe-core/playwright": "^4.10.0"
+  }
+}
