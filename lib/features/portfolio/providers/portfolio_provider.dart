@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/repositories/portfolio_repository.dart';
 import '../../../core/services/supabase_service.dart';
 
@@ -20,3 +21,8 @@ Future<List<Map<String, dynamic>>> publicPortfolio(PublicPortfolioRef ref, Strin
   final repository = ref.watch(portfolioRepositoryProvider);
   return repository.fetchPublicPortfolio(slug);
 }
+
+final userPortfoliosProvider = FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, userId) {
+  final repository = ref.watch(portfolioRepositoryProvider);
+  return repository.fetchUserPortfolios(userId);
+});

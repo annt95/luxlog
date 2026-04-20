@@ -169,6 +169,58 @@
 
 ---
 
+## ✅ Phase G — Save/Bookmark Feature (NEW 2026-04-20)
+
+- [x] Migration `009_saves_table.sql` — `saves(user_id, photo_id, created_at)` with RLS + indexes
+- [x] Repository: `savePhoto()`, `unsavePhoto()`, `hasSaved()`, `fetchSavedPhotos()` in `photo_repository.dart`
+- [x] Providers: `photoSaveStateProvider`, `savedPhotosProvider` in `photo_provider.dart`
+- [x] Photo Detail UI: `_toggleSave()` with optimistic update + rollback, save state loaded from server
+- [x] Feed UI: Bookmark button wired with filled/outlined icon toggle + Semantics label
+- [x] Bug fix: `Share.share()` API (was `SharePlus.instance.share` — wrong API for share_plus 10.1.4)
+- [x] Bug fix: `followStateProvider` renamed to `photoFollowStateProvider` to avoid naming collision with profile module
+- [ ] Apply migration 009 on production Supabase
+
+---
+
+## ✅ Phase H — URL Optimization (NEW 2026-04-20)
+
+**Problem**: URLs were `/?code=UUID#/feed` (hash routing + stale OAuth code visible)
+**Solution**: Switch to path-based URLs → `/feed`
+
+- [x] `pubspec.yaml`: Added `flutter_web_plugins: sdk: flutter` dependency
+- [x] `main.dart`: `usePathUrlStrategy()` call before app init
+- [x] `main.dart`: `_cleanUrlCode()` — GoRouter redirect handles URL cleanup naturally
+- [x] `vercel.json`: SPA fallback rewrite (non-API/asset paths → `/index.html`)
+- [x] `router.dart`: Cleaned invalid `routerNeglect` + unused imports
+
+**Result**: `/?code=UUID#/feed` → `/feed` (clean, SEO-friendly)
+
+---
+
+## 🔵 Phase I — Portfolio Completion (NEW 2026-04-20)
+
+### Blocker Fixed: Missing UPDATE RLS policy
+- [x] Migration `010_portfolio_update_policy.sql` — adds UPDATE policy for `portfolios` table
+
+### Phase I-A: Wire Real Data to Dashboard
+- [x] Repository: `fetchUserPortfolios()`, `createPortfolio()`, `deletePortfolio()`, `updatePortfolioMeta()`
+- [x] Provider: `userPortfoliosProvider` (FutureProvider.autoDispose.family)
+- [x] Dashboard: Replace static `_projects` mock data with real DB query
+- [x] Stats: Computed from real portfolio data (project count, photo count)
+
+### Phase I-B: Wire Editor Stubs
+- [x] `_preview()`: Navigate to `/p/$username` (was "Coming soon" SnackBar)
+- [x] Delete button: Confirmation dialog + `deletePortfolio()` + navigate back
+- [x] Category dropdown: Wired to local state
+- [x] New Project flow: `createPortfolio()` → navigate to `/portfolio/edit/$newId`
+- [x] Load real blocks from DB in `initState` (was hardcoded)
+
+### Phase I-C: Block Type Alignment + Public View
+- [x] Public portfolio `_renderBlock()` adapted to editor format (`coverImage`/`text`/`photoGrid`/`divider`/`contactForm`)
+- [x] Share button wired on public portfolio view
+
+---
+
 ## 🔴 Blockers — Cần xử lý ngay
 
 ### B1. Flutter Environment (Local)

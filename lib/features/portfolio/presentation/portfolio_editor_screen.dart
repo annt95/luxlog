@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/features/portfolio/providers/portfolio_provider.dart';
 import 'package:luxlog/features/auth/providers/auth_provider.dart';
+import 'package:luxlog/features/profile/providers/user_provider.dart';
 
 /// Module 3: Portfolio Editor — drag-reorder project blocks
 class PortfolioEditorScreen extends ConsumerStatefulWidget {
@@ -16,22 +18,53 @@ class PortfolioEditorScreen extends ConsumerStatefulWidget {
 }
 
 class _PortfolioEditorScreenState extends ConsumerState<PortfolioEditorScreen> {
-  final _titleCtrl = TextEditingController(text: 'Tokyo After Rain');
-  final _descCtrl = TextEditingController(
-      text: 'A documentary series capturing the streets of Tokyo on rainy nights.');
-  bool _isPublic = true;
+  final _titleCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  bool _isPublic = false;
   bool _unsaved = false;
+  bool _loading = true;
+  String _category = 'Street Documentary';
 
   // Blocks represent the portfolio sections
-  final List<_Block> _blocks = [
-    _Block(type: _BlockType.coverImage, content: 'https://picsum.photos/seed/cover/800/400'),
-    _Block(type: _BlockType.text, content: 'The rain transforms the city into something otherworldly. Reflections multiply, neon smears, and strangers become silhouettes.'),
-    _Block(type: _BlockType.photoGrid, content: '3'),
-    _Block(type: _BlockType.text, content: 'Shot over 3 nights with the Sony α7 IV and the 35mm GM. ISO pushed to 3200 to keep the shutter fast enough to freeze the rain.'),
-    _Block(type: _BlockType.photoGrid, content: '2'),
-    _Block(type: _BlockType.divider, content: ''),
-    _Block(type: _BlockType.contactForm, content: 'Hire Me'),
-  ];
+  final List<_Block> _blocks = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFromDb();
+  }
+
+  Future<void> _loadFromDb() async {
+    final currentUser = ref.read(currentUserProvider);
+    if (currentUser == null) return;
+    try {
+      final repo = ref.read(portfolioRepositoryProvider);
+      final blocks = await repo.fetchPortfolio(currentUser.id);
+      if (mounted) {
+        setState(() {
+          _blocks.clear();
+          for (final b in blocks) {
+            final typeName = b['type'] as String? ?? 'text';
+            final content = b['content'] as String? ?? '';
+            final type = _BlockType.values.firstWhere(
+              (t) => t.name == typeName,
+              orElse: () => _BlockType.text,
+            );
+            _blocks.add(_Block(type: type, content: content));
+          }
+          if (_blocks.isEmpty) {
+            _blocks.addAll([
+              _Block(type: _BlockType.coverImage, content: ''),
+              _Block(type: _BlockType.text, content: ''),
+            ]);
+          }
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -102,6 +135,9 @@ class _PortfolioEditorScreenState extends ConsumerState<PortfolioEditorScreen> {
                   descCtrl: _descCtrl,
                   isPublic: _isPublic,
                   onPublicToggle: () => setState(() => _isPublic = !_isPublic),
+                  category: _category,
+                  onCategoryChanged: (val) => setState(() { if (val != null) _category = val; _unsaved = true; }),
+                  onDelete: _deleteProject,
                 ),
               ],
             ),
@@ -130,18 +166,47 @@ class _PortfolioEditorScreenState extends ConsumerState<PortfolioEditorScreen> {
         'content': b.content,
       }).toList();
       ref.read(portfolioRepositoryProvider).savePortfolio(currentUser.id, blocksData);
+      ref.invalidate(userPortfoliosProvider(currentUser.id));
     }
     setState(() => _unsaved = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Portfolio saved'), backgroundColor: AppColors.surfaceContainerHigh),
+    );
   }
 
   void _preview() {
-    // TODO: navigate to public portfolio view
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Preview mode coming soon'),
-        backgroundColor: AppColors.surfaceContainerHigh,
+    final profileAsync = ref.read(currentUserProfileProvider);
+    profileAsync.whenData((profile) {
+      final username = profile['username'] as String?;
+      if (username != null && context.mounted) {
+        context.push('/p/$username');
+      }
+    });
+  }
+
+  Future<void> _deleteProject() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceContainerLow,
+        title: const Text('Xóa project?', style: TextStyle(color: AppColors.onSurface)),
+        content: const Text('Hành động này không thể hoàn tác.', style: TextStyle(color: AppColors.onSurfaceVariant)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Xóa', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
       ),
     );
+    if (confirmed == true && mounted) {
+      final repo = ref.read(portfolioRepositoryProvider);
+      await repo.deletePortfolio(widget.projectId);
+      final currentUser = ref.read(currentUserProvider);
+      if (currentUser != null) ref.invalidate(userPortfoliosProvider(currentUser.id));
+      if (mounted) context.go('/portfolio');
+    }
   }
 }
 
@@ -552,12 +617,18 @@ class _PropertiesPanel extends StatelessWidget {
   final TextEditingController descCtrl;
   final bool isPublic;
   final VoidCallback onPublicToggle;
+  final String category;
+  final ValueChanged<String?> onCategoryChanged;
+  final VoidCallback onDelete;
 
   const _PropertiesPanel({
     required this.titleCtrl,
     required this.descCtrl,
     required this.isPublic,
     required this.onPublicToggle,
+    required this.category,
+    required this.onCategoryChanged,
+    required this.onDelete,
   });
 
   @override
@@ -612,7 +683,7 @@ class _PropertiesPanel extends StatelessWidget {
                 border: Border.all(color: AppColors.outlineVariant),
               ),
               child: DropdownButton<String>(
-                value: 'Street Documentary',
+                value: category,
                 isExpanded: true,
                 underline: const SizedBox(),
                 dropdownColor: AppColors.surfaceContainerHigh,
@@ -623,7 +694,7 @@ class _PropertiesPanel extends StatelessWidget {
                   DropdownMenuItem(value: 'Landscape', child: Text('Landscape')),
                   DropdownMenuItem(value: 'Commercial', child: Text('Commercial')),
                 ],
-                onChanged: (_) {},
+                onChanged: onCategoryChanged,
               ),
             ),
 
@@ -648,7 +719,7 @@ class _PropertiesPanel extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () {},
+                onPressed: onDelete,
                 icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.error),
                 label: const Text('Delete Project'),
                 style: OutlinedButton.styleFrom(

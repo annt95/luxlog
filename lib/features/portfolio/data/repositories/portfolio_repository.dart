@@ -86,4 +86,76 @@ class PortfolioRepository {
       );
     }
   }
+
+  Future<List<Map<String, dynamic>>> fetchUserPortfolios(String userId) async {
+    try {
+      final response = await _client
+          .from('portfolios')
+          .select('id, title, slug, cover_image, is_public, blocks, created_at')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(response as List);
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tải danh sách portfolios (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException('Lỗi tải danh sách portfolios', cause: e, stackTrace: stackTrace);
+    }
+  }
+
+  Future<String> createPortfolio(String userId, String title) async {
+    try {
+      final response = await _client.from('portfolios').insert({
+        'user_id': userId,
+        'title': title,
+        'is_public': false,
+        'blocks': '[]',
+      }).select('id').single();
+      return response['id'] as String;
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi tạo portfolio (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException('Lỗi tạo portfolio', cause: e, stackTrace: stackTrace);
+    }
+  }
+
+  Future<void> deletePortfolio(String portfolioId) async {
+    try {
+      await _client.from('portfolios').delete().eq('id', portfolioId);
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi xóa portfolio (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException('Lỗi xóa portfolio', cause: e, stackTrace: stackTrace);
+    }
+  }
+
+  Future<void> updatePortfolioMeta(String portfolioId, {String? title, String? slug, bool? isPublic}) async {
+    try {
+      final updates = <String, dynamic>{};
+      if (title != null) updates['title'] = title;
+      if (slug != null) updates['slug'] = slug;
+      if (isPublic != null) updates['is_public'] = isPublic;
+      if (updates.isEmpty) return;
+      await _client.from('portfolios').update(updates).eq('id', portfolioId);
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException(
+        'Lỗi cập nhật portfolio (${e.code ?? 'unknown'})',
+        cause: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      throw NetworkException('Lỗi cập nhật portfolio', cause: e, stackTrace: stackTrace);
+    }
+  }
 }

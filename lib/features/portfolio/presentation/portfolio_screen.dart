@@ -12,24 +12,32 @@ import 'package:luxlog/features/auth/providers/auth_provider.dart';
 class PortfolioScreen extends ConsumerWidget {
   const PortfolioScreen({super.key});
 
-  static const _projects = [
-    _Project('Tokyo After Rain', 'Street Documentary · 24 photos',
-        'https://picsum.photos/seed/port1/800/500', 2847, true),
-    _Project('Faces of Shinjuku', 'Portrait Series · 16 photos',
-        'https://picsum.photos/seed/port2/800/500', 1203, true),
-    _Project('Neon Nights', 'Urban Nightlife · 32 photos',
-        'https://picsum.photos/seed/port3/800/500', 4521, false),
-    _Project('Silent Gardens', 'Nature & Zen · 12 photos',
-        'https://picsum.photos/seed/port4/800/500', 876, true),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
-    // Pre-load portfolio blocks if user is authenticated
-    if (currentUser != null) {
-      ref.watch(portfolioBlocksProvider(currentUser.id));
+
+    if (currentUser == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.collections_outlined, size: 48, color: AppColors.onSurfaceVariant),
+              const SizedBox(height: 16),
+              Text('Đăng nhập để quản lý portfolio', style: AppTextStyles.body),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () => context.push('/login'),
+                child: const Text('Đăng nhập'),
+              ),
+            ],
+          ),
+        ),
+      );
     }
+
+    final portfoliosAsync = ref.watch(userPortfoliosProvider(currentUser.id));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -42,7 +50,13 @@ class PortfolioScreen extends ConsumerWidget {
           ),
 
           // Stat cards
-          SliverToBoxAdapter(child: _PortfolioStats()),
+          SliverToBoxAdapter(
+            child: portfoliosAsync.when(
+              data: (portfolios) => _PortfolioStats(portfolios: portfolios),
+              loading: () => _PortfolioStats(portfolios: const []),
+              error: (_, __) => _PortfolioStats(portfolios: const []),
+            ),
+          ),
 
           // New project CTA
           SliverToBoxAdapter(
@@ -53,7 +67,12 @@ class PortfolioScreen extends ConsumerWidget {
                   Text('My Projects', style: AppTextStyles.sectionHeader),
                   const Spacer(),
                   GestureDetector(
-                    onTap: () => context.push('/portfolio/edit/new'),
+                    onTap: () async {
+                      final repo = ref.read(portfolioRepositoryProvider);
+                      final newId = await repo.createPortfolio(currentUser.id, 'Untitled Project');
+                      if (context.mounted) context.push('/portfolio/edit/$newId');
+                      ref.invalidate(userPortfoliosProvider(currentUser.id));
+                    },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 8),
@@ -86,10 +105,41 @@ class PortfolioScreen extends ConsumerWidget {
           ),
 
           // Project list
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, i) => _ProjectCard(project: _projects[i], index: i),
-              childCount: _projects.length,
+          portfoliosAsync.when(
+            data: (portfolios) => portfolios.isEmpty
+                ? SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            const Icon(Icons.photo_library_outlined, size: 48, color: AppColors.onSurfaceVariant),
+                            const SizedBox(height: 12),
+                            Text('Chưa có project nào', style: AppTextStyles.body.copyWith(color: AppColors.onSurfaceVariant)),
+                            const SizedBox(height: 8),
+                            Text('Tạo project đầu tiên để bắt đầu!', style: AppTextStyles.caption),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                : SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, i) => _ProjectCard(portfolio: portfolios[i], index: i),
+                      childCount: portfolios.length,
+                    ),
+                  ),
+            loading: () => const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+              ),
+            ),
+            error: (e, _) => SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Center(child: Text('Lỗi tải portfolios', style: AppTextStyles.body)),
+              ),
             ),
           ),
 
@@ -98,17 +148,6 @@ class PortfolioScreen extends ConsumerWidget {
       ),
     );
   }
-}
-
-// ── Data ──────────────────────────────────────────────────────────────────────
-
-class _Project {
-  final String title, subtitle, coverUrl;
-  final int views;
-  final bool isPublic;
-
-  const _Project(
-      this.title, this.subtitle, this.coverUrl, this.views, this.isPublic);
 }
 
 // ── AppBar ───────────────────────────────────────────────────────────────────
@@ -166,8 +205,14 @@ class _PortfolioAppBarDelegate extends SliverPersistentHeaderDelegate {
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
 class _PortfolioStats extends StatelessWidget {
+  final List<Map<String, dynamic>> portfolios;
+  const _PortfolioStats({required this.portfolios});
+
   @override
   Widget build(BuildContext context) {
+    final projectCount = portfolios.length;
+    final publicCount = portfolios.where((p) => p['is_public'] == true).length;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(16),
@@ -177,14 +222,12 @@ class _PortfolioStats extends StatelessWidget {
         border: Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.2)),
       ),
       child: Row(
-        children: const [
-          _StatItem(value: '847k', label: 'Total Views', icon: Icons.visibility_outlined),
-          _Divider(),
-          _StatItem(value: '9.3k', label: 'Total Likes', icon: Icons.favorite_border),
-          _Divider(),
-          _StatItem(value: '4', label: 'Projects', icon: Icons.collections_outlined),
-          _Divider(),
-          _StatItem(value: '84', label: 'Photos', icon: Icons.photo_outlined),
+        children: [
+          _StatItem(value: '$projectCount', label: 'Projects', icon: Icons.collections_outlined),
+          const _Divider(),
+          _StatItem(value: '$publicCount', label: 'Public', icon: Icons.public),
+          const _Divider(),
+          _StatItem(value: '${projectCount - publicCount}', label: 'Drafts', icon: Icons.edit_outlined),
         ],
       ),
     ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05);
@@ -235,9 +278,9 @@ class _Divider extends StatelessWidget {
 // ── Project Card ──────────────────────────────────────────────────────────────
 
 class _ProjectCard extends StatefulWidget {
-  final _Project project;
+  final Map<String, dynamic> portfolio;
   final int index;
-  const _ProjectCard({required this.project, required this.index});
+  const _ProjectCard({required this.portfolio, required this.index});
 
   @override
   State<_ProjectCard> createState() => _ProjectCardState();
@@ -248,13 +291,18 @@ class _ProjectCardState extends State<_ProjectCard> {
 
   @override
   Widget build(BuildContext context) {
+    final title = widget.portfolio['title'] as String? ?? 'Untitled';
+    final isPublic = widget.portfolio['is_public'] as bool? ?? false;
+    final coverImage = widget.portfolio['cover_image'] as String?;
+    final portfolioId = widget.portfolio['id'] as String;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: MouseRegion(
         onEnter: (_) => setState(() => _isHovered = true),
         onExit: (_) => setState(() => _isHovered = false),
         child: GestureDetector(
-          onTap: () => context.push('/portfolio/edit/${widget.index}'),
+          onTap: () => context.push('/portfolio/edit/$portfolioId'),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
@@ -274,10 +322,17 @@ class _ProjectCardState extends State<_ProjectCard> {
                     children: [
                       AspectRatio(
                         aspectRatio: 16 / 7,
-                        child: CachedNetworkImage(
-                          imageUrl: widget.project.coverUrl,
-                          fit: BoxFit.cover,
-                        ),
+                        child: coverImage != null
+                            ? CachedNetworkImage(
+                                imageUrl: coverImage,
+                                fit: BoxFit.cover,
+                              )
+                            : Container(
+                                color: AppColors.surfaceContainerHigh,
+                                child: const Center(
+                                  child: Icon(Icons.image_outlined, size: 40, color: AppColors.onSurfaceVariant),
+                                ),
+                              ),
                       ),
                       // Public/Private badge
                       Positioned(
@@ -294,19 +349,17 @@ class _ProjectCardState extends State<_ProjectCard> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                widget.project.isPublic
-                                    ? Icons.public
-                                    : Icons.lock_outline,
-                                color: widget.project.isPublic
+                                isPublic ? Icons.public : Icons.lock_outline,
+                                color: isPublic
                                     ? AppColors.primary
                                     : AppColors.onSurfaceVariant,
                                 size: 12,
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                widget.project.isPublic ? 'Public' : 'Draft',
+                                isPublic ? 'Public' : 'Draft',
                                 style: AppTextStyles.caption.copyWith(
-                                  color: widget.project.isPublic
+                                  color: isPublic
                                       ? AppColors.primary
                                       : AppColors.onSurfaceVariant,
                                 ),
@@ -325,29 +378,7 @@ class _ProjectCardState extends State<_ProjectCard> {
                     child: Row(
                       children: [
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(widget.project.title,
-                                  style: AppTextStyles.titleMedium),
-                              const SizedBox(height: 2),
-                              Text(widget.project.subtitle,
-                                  style: AppTextStyles.bodySmall),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // Views
-                        Row(
-                          children: [
-                            const Icon(Icons.visibility_outlined,
-                                size: 14, color: AppColors.onSurfaceVariant),
-                            const SizedBox(width: 4),
-                            Text(
-                              _fmt(widget.project.views),
-                              style: AppTextStyles.caption,
-                            ),
-                          ],
+                          child: Text(title, style: AppTextStyles.titleMedium),
                         ),
                         const SizedBox(width: 12),
                         // Edit btn
@@ -383,10 +414,5 @@ class _ProjectCardState extends State<_ProjectCard> {
         .animate(delay: Duration(milliseconds: widget.index * 80))
         .fadeIn()
         .slideY(begin: 0.05);
-  }
-
-  String _fmt(int n) {
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
-    return '$n';
   }
 }
