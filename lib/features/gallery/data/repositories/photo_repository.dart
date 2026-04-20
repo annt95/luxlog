@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart'
     hide AuthException, StorageException;
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/utils/rate_limiter.dart';
 
 class PhotoRepository {
   final SupabaseClient _client;
@@ -237,6 +238,9 @@ class PhotoRepository {
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
+      if (!RateLimiter.canProceed('like_${photoId}_$userId', const Duration(seconds: 1))) {
+        throw const ValidationException('Thao tác quá nhanh, vui lòng chờ một lát.');
+      }
       await _client.from('likes').insert({'photo_id': photoId, 'user_id': userId});
     } on PostgrestException catch (e, stackTrace) {
       throw NetworkException(
@@ -253,6 +257,9 @@ class PhotoRepository {
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
+      if (!RateLimiter.canProceed('unlike_${photoId}_$userId', const Duration(seconds: 1))) {
+        throw const ValidationException('Thao tác quá nhanh, vui lòng chờ một lát.');
+      }
       await _client.from('likes').delete().match({'photo_id': photoId, 'user_id': userId});
     } on PostgrestException catch (e, stackTrace) {
       throw NetworkException(
@@ -359,6 +366,9 @@ class PhotoRepository {
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
+      if (!RateLimiter.canProceed('comment_${photoId}_$userId', const Duration(seconds: 3))) {
+        throw const ValidationException('Vui lòng chờ vài giây trước khi bình luận tiếp.');
+      }
       await _client.from('comments').insert({
         'photo_id': photoId,
         'user_id': userId,

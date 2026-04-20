@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/utils/rate_limiter.dart';
 
 class UserRepository {
   final SupabaseClient _client;
@@ -115,6 +116,9 @@ class UserRepository {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
       if (targetId == userId) return; // prevent self-follow
+      if (!RateLimiter.canProceed('follow_${targetId}_$userId', const Duration(seconds: 1))) {
+        throw const ValidationException('Thao tác quá nhanh, vui lòng chờ một lát.');
+      }
       await _client.from('follows').insert({
         'follower_id': userId,
         'following_id': targetId,
@@ -140,6 +144,9 @@ class UserRepository {
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
+      if (!RateLimiter.canProceed('unfollow_${targetId}_$userId', const Duration(seconds: 1))) {
+        throw const ValidationException('Thao tác quá nhanh, vui lòng chờ một lát.');
+      }
       await _client.from('follows').delete().match({
         'follower_id': userId,
         'following_id': targetId,

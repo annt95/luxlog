@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'logger.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
+import '../../core/config/env.dart';
 
 /// Centralized error reporting service.
 /// In debug mode: logs to console.
@@ -41,10 +43,9 @@ class ErrorReporter {
       stackTrace,
     );
 
-    // TODO: In production, forward to Sentry or HTTP logging endpoint:
-    // if (kReleaseMode) {
-    //   Sentry.captureException(error, stackTrace: stackTrace);
-    // }
+    if (kReleaseMode && Env.sentryDsn.isNotEmpty) {
+      Sentry.captureException(error, stackTrace: stackTrace);
+    }
   }
 
   /// Report a Flutter framework error.

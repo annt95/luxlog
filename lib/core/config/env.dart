@@ -6,6 +6,9 @@ class Env {
   // On Web, OAuth redirects are handled entirely by Supabase server-side.
   static const String googleClientId = String.fromEnvironment('GOOGLE_CLIENT_ID', defaultValue: '');
 
+  // Sentry DSN for Error Tracking
+  static const String sentryDsn = String.fromEnvironment('SENTRY_DSN', defaultValue: '');
+
   static bool get hasSupabaseConfig {
     return supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
   }

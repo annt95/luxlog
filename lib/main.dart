@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:luxlog/app/router.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/core/config/env.dart';
 import 'package:luxlog/core/services/error_reporter.dart';
 import 'package:luxlog/core/services/supabase_service.dart';
 import 'package:luxlog/core/widgets/error_boundary.dart';
 import 'package:luxlog/features/auth/providers/auth_provider.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,14 +39,24 @@ void main() async {
     systemNavigationBarIconBrightness: Brightness.light,
   ));
 
-  runApp(
-    ProviderScope(
-      child: LuxlogApp(
-        isBackendReady: SupabaseService.isInitialized,
-        initError: initError,
-      ),
+  final app = ProviderScope(
+    child: LuxlogApp(
+      isBackendReady: SupabaseService.isInitialized,
+      initError: initError,
     ),
   );
+
+  if (kReleaseMode && Env.sentryDsn.isNotEmpty) {
+    await SentryFlutter.init(
+      (options) {
+        options.dsn = Env.sentryDsn;
+        options.tracesSampleRate = 1.0;
+      },
+      appRunner: () => runApp(app),
+    );
+  } else {
+    runApp(app);
+  }
 }
 
 /// Checks if the current URL contains a `?code=` param from OAuth redirect
@@ -58,9 +70,16 @@ Future<void> _handleOAuthCodeExchange() async {
       // Clean up the URL by removing the ?code= param
       _cleanUrlCode();
     }
-  } catch (e) {
-    // Code may have already been exchanged or expired — silently ignore.
-    debugPrint('OAuth code exchange failed (may be stale): $e');
+  } catch (error, stackTrace) {
+    if (error.toString().contains('AuthException') && 
+        (error.toString().contains('already') || error.toString().contains('expired'))) {
+      // Code may have already been exchanged or expired — silently ignore.
+      debugPrint('OAuth code exchange failed predictably (stale): $error');
+    } else {
+      // Real auth error (e.g. invalid URI, malformed state)
+      debugPrint('Real OAuth error: $error');
+      ErrorReporter().reportError(error, stackTrace, context: '_handleOAuthCodeExchange');
+    }
   }
 }
 
