@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/shared/widgets/error_retry_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/features/profile/providers/follow_state_provider.dart';
 import 'package:luxlog/features/profile/providers/user_provider.dart';
@@ -58,15 +59,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       ),
       error: (e, _) => Scaffold(
         backgroundColor: AppColors.background,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              e.toString(),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70),
-            ),
-          ),
+        body: ErrorRetryWidget(
+          message: 'Failed to load profile',
+          onRetry: () => ref.invalidate(userProfileProvider(widget.username)),
         ),
       ),
       data: (profile) {

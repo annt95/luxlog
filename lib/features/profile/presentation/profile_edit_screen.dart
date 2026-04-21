@@ -104,6 +104,20 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
 
       // 1. Upload avatar if selected
       if (_selectedAvatarBytes != null) {
+        // Delete old avatar file from storage if it exists
+        if (_currentAvatarUrl != null && _currentAvatarUrl!.contains('/photos/')) {
+          try {
+            final oldPath = Uri.parse(_currentAvatarUrl!).pathSegments;
+            final bucketIdx = oldPath.indexOf('photos');
+            if (bucketIdx != -1 && bucketIdx + 1 < oldPath.length) {
+              final oldStoragePath = oldPath.sublist(bucketIdx + 1).join('/');
+              await client.storage.from('photos').remove([oldStoragePath]);
+            }
+          } catch (_) {
+            // Non-critical: old file cleanup failed, continue with upload
+          }
+        }
+
         final path = 'avatars/$userId/${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(1000)}.$_selectedAvatarExt';
         
         await client.storage.from('photos').uploadBinary(

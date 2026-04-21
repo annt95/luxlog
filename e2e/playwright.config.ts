@@ -57,6 +57,30 @@ export default defineConfig({
       },
       dependencies: ['setup'],
     },
+    {
+      name: 'webkit',
+      use: {
+        ...devices['Desktop Safari'],
+        storageState: './fixtures/.auth/user.json',
+      },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'mobile-chrome',
+      use: {
+        ...devices['Pixel 7'],
+        storageState: './fixtures/.auth/user.json',
+      },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'mobile-safari',
+      use: {
+        ...devices['iPhone 14'],
+        storageState: './fixtures/.auth/user.json',
+      },
+      dependencies: ['setup'],
+    },
     // Tests that don't need authentication
     {
       name: 'no-auth',

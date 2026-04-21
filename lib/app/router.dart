@@ -90,8 +90,10 @@ final router = GoRouter(
         GoRoute(
           path: '/explore',
           name: 'explore',
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: ExploreScreen(),
+          pageBuilder: (context, state) => NoTransitionPage(
+            child: ExploreScreen(
+              initialQuery: state.uri.queryParameters['q'],
+            ),
           ),
         ),
 

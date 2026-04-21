@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/shared/widgets/error_retry_widget.dart';
 import 'package:luxlog/core/services/image_url_optimizer.dart';
 import 'package:luxlog/shared/widgets/exif_badge.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
@@ -102,8 +103,9 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
-        error: (err, stack) => Center(
-          child: Text('Failed to load photo', style: AppTextStyles.body),
+        error: (err, stack) => ErrorRetryWidget(
+          message: 'Failed to load photo',
+          onRetry: () => ref.invalidate(photoDetailProvider(widget.photoId)),
         ),
         data: (photo) {
           final profile = photo['profiles'] as Map<String, dynamic>?;

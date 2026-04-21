@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luxlog/features/profile/providers/user_provider.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/shared/widgets/error_retry_widget.dart';
 import 'package:luxlog/core/services/image_url_optimizer.dart';
 import 'package:luxlog/shared/widgets/photo_card.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
@@ -191,7 +192,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               ),
             ),
             error: (e, _) => SliverFillRemaining(
-              child: Center(child: Text('Error loading feed', style: TextStyle(color: AppColors.onSurfaceVariant))),
+              child: ErrorRetryWidget(
+                message: 'Error loading feed',
+                onRetry: () => ref.invalidate(photoFeedProvider),
+              ),
             ),
           ),
         ],

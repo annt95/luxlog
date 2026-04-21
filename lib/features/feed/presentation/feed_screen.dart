@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/shared/widgets/error_retry_widget.dart';
 import 'package:luxlog/core/services/image_url_optimizer.dart';
 import 'package:luxlog/features/gallery/presentation/widgets/comment_bottom_sheet.dart';
 import 'package:luxlog/shared/widgets/skeleton_widgets.dart';
@@ -112,11 +113,9 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
             ],
             error: (error, _) => <Widget>[
               SliverFillRemaining(
-                child: Center(
-                  child: Text(
-                    'Failed to load feed',
-                    style: AppTextStyles.body,
-                  ),
+                child: ErrorRetryWidget(
+                  message: 'Failed to load feed',
+                  onRetry: () => ref.invalidate(photoFeedProvider),
                 ),
               ),
             ],

@@ -172,11 +172,14 @@ class PhotoRepository {
       // Fix MIME type for .jpg (Supabase expects 'image/jpeg' and rejects 'image/jpg' with 400 Bad Request)
       final String mimeType = (ext == 'jpg') ? 'image/jpeg' : 'image/$ext';
 
-      // 2. Upload to Supabase Storage bucket "photos"
+      // 2. Upload to Supabase Storage bucket "photos" (with 5-minute timeout)
       await _client.storage.from('photos').uploadBinary(
         storagePath,
         fileBytes,
         fileOptions: FileOptions(contentType: mimeType),
+      ).timeout(
+        const Duration(minutes: 5),
+        onTimeout: () => throw StorageException('Upload timed out. Please check your connection and try again.'),
       );
 
       // 3. Get public URL
@@ -363,6 +366,8 @@ class PhotoRepository {
     if (trimmed.length > 1000) {
       throw const ValidationException('Comment must be under 1000 characters');
     }
+    // Strip HTML tags to prevent XSS in downstream rendering (email, SEO, export)
+    final sanitized = trimmed.replaceAll(RegExp(r'<[^>]*>'), '');
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) throw AuthException('Vui lòng đăng nhập để thực hiện thao tác này');
@@ -372,7 +377,7 @@ class PhotoRepository {
       await _client.from('comments').insert({
         'photo_id': photoId,
         'user_id': userId,
-        'text': trimmed,
+        'text': sanitized,
       });
     } on PostgrestException catch (e, stackTrace) {
       throw NetworkException(

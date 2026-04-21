@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/shared/widgets/error_retry_widget.dart';
 import 'package:luxlog/features/portfolio/providers/portfolio_provider.dart';
 
 class PublicPortfolioScreen extends ConsumerWidget {
@@ -46,7 +47,10 @@ class PublicPortfolioScreen extends ConsumerWidget {
           ],
         ),
         loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-        error: (e, _) => Center(child: Text('Portfolio not found', style: TextStyle(color: AppColors.onSurfaceVariant))),
+        error: (e, _) => ErrorRetryWidget(
+          message: 'Portfolio not found',
+          onRetry: () => ref.invalidate(publicPortfolioProvider(slug)),
+        ),
       ),
     );
   }

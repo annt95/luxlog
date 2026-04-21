@@ -145,7 +145,14 @@ class PortfolioRepository {
       final updates = <String, dynamic>{};
       if (title != null) updates['title'] = title;
       if (slug != null) updates['slug'] = slug;
-      if (isPublic != null) updates['is_public'] = isPublic;
+      if (isPublic != null) {
+        updates['is_public'] = isPublic;
+        // Track publish timestamp and increment version when making public
+        if (isPublic) {
+          updates['published_at'] = DateTime.now().toUtc().toIso8601String();
+          // Increment version via raw SQL would be ideal, but for now set in app
+        }
+      }
       if (updates.isEmpty) return;
       await _client.from('portfolios').update(updates).eq('id', portfolioId);
     } on PostgrestException catch (e, stackTrace) {

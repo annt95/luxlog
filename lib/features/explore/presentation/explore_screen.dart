@@ -14,7 +14,8 @@ import 'package:luxlog/features/tags/providers/tag_provider.dart';
 
 /// Explore / Search screen
 class ExploreScreen extends ConsumerStatefulWidget {
-  const ExploreScreen({super.key});
+  final String? initialQuery;
+  const ExploreScreen({super.key, this.initialQuery});
 
   @override
   ConsumerState<ExploreScreen> createState() => _ExploreScreenState();
@@ -47,6 +48,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: _tabs.length, vsync: this);
+    // Restore search query from URL if present
+    if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
+      _query = widget.initialQuery!;
+      _searchCtrl.text = _query;
+      _searching = true;
+    }
   }
 
   @override

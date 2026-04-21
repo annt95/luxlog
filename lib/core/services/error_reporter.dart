@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'logger.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -12,6 +13,14 @@ class ErrorReporter {
   ErrorReporter._();
 
   bool _initialized = false;
+
+  /// Unique session ID for correlating errors across a single app session.
+  late final String sessionId = _generateSessionId();
+
+  static String _generateSessionId() {
+    final r = Random();
+    return List.generate(8, (_) => r.nextInt(16).toRadixString(16)).join();
+  }
 
   /// Initialize error reporting infrastructure.
   /// Call once in main() before runApp().
@@ -32,18 +41,19 @@ class ErrorReporter {
       return true;
     };
 
-    AppLogger.info('ErrorReporter initialized');
+    AppLogger.info('ErrorReporter initialized [session=$sessionId]');
   }
 
   /// Report a generic error with optional context description.
   void reportError(Object error, StackTrace? stackTrace, {String? context}) {
     AppLogger.error(
-      context ?? 'Unhandled error',
+      '[sid:$sessionId] ${context ?? 'Unhandled error'}',
       error,
       stackTrace,
     );
 
     if (kReleaseMode && Env.sentryDsn.isNotEmpty) {
+      Sentry.configureScope((scope) => scope.setTag('session_id', sessionId));
       Sentry.captureException(error, stackTrace: stackTrace);
     }
   }
@@ -51,7 +61,7 @@ class ErrorReporter {
   /// Report a Flutter framework error.
   void reportFlutterError(FlutterErrorDetails details) {
     AppLogger.error(
-      'Flutter error: ${details.context?.toString() ?? 'unknown context'}',
+      '[sid:$sessionId] Flutter error: ${details.context?.toString() ?? 'unknown context'}',
       details.exception,
       details.stack,
     );

@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/shared/widgets/error_retry_widget.dart';
 import 'package:luxlog/features/portfolio/providers/portfolio_provider.dart';
 import 'package:luxlog/features/auth/providers/auth_provider.dart';
 
@@ -136,9 +137,12 @@ class PortfolioScreen extends ConsumerWidget {
               ),
             ),
             error: (e, _) => SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Center(child: Text('Lỗi tải portfolios', style: AppTextStyles.body)),
+              child: ErrorRetryWidget(
+                message: 'Lỗi tải portfolios',
+                onRetry: () {
+                  final user = ref.read(currentUserProvider);
+                  if (user != null) ref.invalidate(userPortfoliosProvider(user.id));
+                },
               ),
             ),
           ),

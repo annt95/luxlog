@@ -67,4 +67,29 @@ cd e2e && npx playwright test
 ## Deployment
 
 The app deploys to Vercel as a Flutter web app with CanvasKit renderer.
+
+## Secrets & Key Rotation
+
+### Environment Variables (Vercel)
+
+| Variable | Rotation | Notes |
+|---|---|---|
+| `SUPABASE_URL` | Rarely | Only changes if project migrates |
+| `SUPABASE_ANON_KEY` | Quarterly | Rotate via Supabase dashboard → Settings → API |
+| `SENTRY_DSN` | Rarely | Rotate if leaked |
+| `GOOGLE_CLIENT_ID` | Yearly | Google Cloud Console → OAuth 2.0 |
+
+### Rotation Process
+
+1. Generate new key in respective dashboard (Supabase/Google/Sentry)
+2. Update Vercel env vars: `vercel env add VARIABLE_NAME`
+3. Redeploy: push to main or `vercel --prod`
+4. Verify app functionality post-deploy
+5. Revoke old key in source dashboard
+
+### Monitoring
+
+- GitHub Secret Scanning: enabled (alerts on leaked keys in commits)
+- Review Vercel deploy logs monthly for auth/API failures
+- Supabase Dashboard → Logs: check for 401/403 spikes after rotation
 See `vercel.json` and `vercel-build.sh` for configuration.

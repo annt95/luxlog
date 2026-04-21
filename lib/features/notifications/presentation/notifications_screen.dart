@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxlog/app/theme.dart';
+import 'package:luxlog/shared/widgets/error_retry_widget.dart';
 import 'package:luxlog/features/auth/providers/auth_provider.dart';
 import 'package:luxlog/features/notifications/providers/notification_provider.dart';
 
@@ -48,8 +49,9 @@ class NotificationsScreen extends ConsumerWidget {
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
-        error: (_, __) => const Center(
-          child: Text('Failed to load notifications'),
+        error: (_, __) => ErrorRetryWidget(
+          message: 'Failed to load notifications',
+          onRetry: () => ref.invalidate(notificationsProvider),
         ),
         data: (items) {
           if (items.isEmpty) {

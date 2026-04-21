@@ -8,12 +8,32 @@ class AnalyticsService {
   factory AnalyticsService() => _instance;
   AnalyticsService._();
 
+  /// Active timers for duration tracking
+  final Map<String, Stopwatch> _timers = {};
+
+  /// Start timing an operation (e.g. 'signup', 'upload', 'page_load')
+  void startTimer(String name) {
+    _timers[name] = Stopwatch()..start();
+  }
+
+  /// Stop timing and log duration. Returns elapsed milliseconds.
+  int endTimer(String name) {
+    final sw = _timers.remove(name);
+    if (sw == null) return 0;
+    sw.stop();
+    final ms = sw.elapsedMilliseconds;
+    _track('${name}_duration', {'duration_ms': ms});
+    return ms;
+  }
+
   void trackSignupCompleted({required String method}) {
-    _track('signup_completed', {'method': method});
+    final durationMs = endTimer('signup');
+    _track('signup_completed', {'method': method, if (durationMs > 0) 'duration_ms': durationMs});
   }
 
   void trackPhotoUploaded({required String photoId, bool isFilm = false}) {
-    _track('photo_uploaded', {'photo_id': photoId, 'is_film': isFilm});
+    final durationMs = endTimer('upload');
+    _track('photo_uploaded', {'photo_id': photoId, 'is_film': isFilm, if (durationMs > 0) 'duration_ms': durationMs});
   }
 
   void trackPhotoLiked({required String photoId}) {
@@ -32,12 +52,16 @@ class AnalyticsService {
     _track('photo_viewed', {'photo_id': photoId});
   }
 
+  void trackPageLoad({required String route, required int durationMs}) {
+    _track('page_load', {'route': route, 'duration_ms': durationMs});
+  }
+
   void _track(String event, [Map<String, dynamic>? properties]) {
     AppLogger.info('analytics: $event', properties);
 
     // TODO: Forward to external analytics in production:
     // - Vercel Analytics: custom events via vercel_analytics package
     // - Supabase: insert into `events` table
-    // - PostHog / Mixpanel / Amplitude
+    // - Sentry Performance: transactions
   }
 }
