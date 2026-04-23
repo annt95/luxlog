@@ -433,7 +433,7 @@ class _TrendingPhotoTile extends StatelessWidget {
     final photoId = photo['id'] as String? ?? '';
     final imageUrl = photo['image_url'] as String? ?? '';
     final photoIndex = photoId.hashCode.abs();
-    return GestureDetector(
+    final tile = GestureDetector(
       onTap: () => context.push('/photo/$photoId'),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(3),
