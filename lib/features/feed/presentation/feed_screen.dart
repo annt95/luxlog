@@ -370,12 +370,12 @@ class _TabItem extends StatelessWidget {
 class _StoriesRow extends StatelessWidget {
   static final _users = [
     ('Your Story', null, true),
-    ('Marcus C.', 'https://i.pravatar.cc/150?img=1', false),
-    ('Sarah K.', 'https://i.pravatar.cc/150?img=2', false),
-    ('Rio P.', 'https://i.pravatar.cc/150?img=3', false),
-    ('Alex M.', 'https://i.pravatar.cc/150?img=4', false),
-    ('Lina R.', 'https://i.pravatar.cc/150?img=5', false),
-    ('James T.', 'https://i.pravatar.cc/150?img=6', false),
+    ('Marcus C.', 'https://ui-avatars.com/api/?name=Marcus+C&background=random', false),
+    ('Sarah K.', 'https://ui-avatars.com/api/?name=Sarah+K&background=random', false),
+    ('Rio P.', 'https://ui-avatars.com/api/?name=Rio+P&background=random', false),
+    ('Alex M.', 'https://ui-avatars.com/api/?name=Alex+M&background=random', false),
+    ('Lina R.', 'https://ui-avatars.com/api/?name=Lina+R&background=random', false),
+    ('James T.', 'https://ui-avatars.com/api/?name=James+T&background=random', false),
   ];
 
   @override
@@ -442,6 +442,11 @@ class _StoryBubble extends StatelessWidget {
                 : CircleAvatar(
                     backgroundImage: avatarUrl != null
                         ? NetworkImage(avatarUrl!)
+                        : null,
+                    onBackgroundImageError: avatarUrl != null
+                        ? (exception, stackTrace) {
+                            debugPrint('Error loading avatar: $exception');
+                          }
                         : null,
                     child: avatarUrl == null
                         ? Text(name[0], style: AppTextStyles.label)
