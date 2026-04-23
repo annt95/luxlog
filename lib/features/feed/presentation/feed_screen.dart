@@ -85,8 +85,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
             ),
           ),
 
-          // Stories row
-          SliverToBoxAdapter(child: _StoriesRow()),
 
           // Divider (tonal)
           SliverToBoxAdapter(
@@ -96,7 +94,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           // Post feed
           ...feedAsync.when(
             data: (feedState) {
-              final posts = feedState.items.map(_MockPost.fromRow).toList();
+              final posts = feedState.items.map(_FeedPostData.fromRow).toList();
               if (posts.isEmpty) {
                 return <Widget>[
                   const SliverFillRemaining(
@@ -214,14 +212,14 @@ class _EndOfFeedIndicator extends StatelessWidget {
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
-class _MockPost {
+class _FeedPostData {
   final String id, userId, username, displayName, imageUrl, caption;
   final int likes, comments;
   final bool isLiked;
   final String timeAgo, camera, exifShort;
   final double aspect;
 
-  const _MockPost({
+  const _FeedPostData({
     required this.id,
     required this.userId,
     required this.username,
@@ -237,7 +235,7 @@ class _MockPost {
     required this.aspect,
   });
 
-  factory _MockPost.fromRow(Map<String, dynamic> row) {
+  factory _FeedPostData.fromRow(Map<String, dynamic> row) {
     final profile = row['profiles'] as Map<String, dynamic>?;
     final username = profile?['username'] as String? ?? 'photographer';
     final fullName = profile?['full_name'] as String?;
@@ -248,7 +246,7 @@ class _MockPost {
     final aperture = row['aperture'] as String?;
     final iso = row['iso'] as int?;
 
-    return _MockPost(
+    return _FeedPostData(
       id: row['id'] as String? ?? '',
       userId: row['user_id'] as String? ?? '',
       username: username,
@@ -367,120 +365,12 @@ class _TabItem extends StatelessWidget {
 
 // ── Stories Row ───────────────────────────────────────────────────────────────
 
-class _StoriesRow extends StatelessWidget {
-  static final _users = [
-    ('Your Story', null, true),
-    ('Marcus C.', 'https://ui-avatars.com/api/?name=Marcus+C&background=random', false),
-    ('Sarah K.', 'https://ui-avatars.com/api/?name=Sarah+K&background=random', false),
-    ('Rio P.', 'https://ui-avatars.com/api/?name=Rio+P&background=random', false),
-    ('Alex M.', 'https://ui-avatars.com/api/?name=Alex+M&background=random', false),
-    ('Lina R.', 'https://ui-avatars.com/api/?name=Lina+R&background=random', false),
-    ('James T.', 'https://ui-avatars.com/api/?name=James+T&background=random', false),
-  ];
 
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 92,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        itemCount: _users.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 14),
-        itemBuilder: (context, i) {
-          final (name, avatar, isOwn) = _users[i];
-          return _StoryBubble(
-            name: name,
-            avatarUrl: avatar,
-            isOwn: isOwn,
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _StoryBubble extends StatelessWidget {
-  final String name;
-  final String? avatarUrl;
-  final bool isOwn;
-
-  const _StoryBubble({
-    required this.name,
-    this.avatarUrl,
-    required this.isOwn,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isOwn ? 'Tạo Story mới (Coming soon)' : 'Xem Story của $name (Coming soon)'),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-        Container(
-          width: 52,
-          height: 52,
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: isOwn
-                ? null
-                : const LinearGradient(
-                    colors: [AppColors.primary, AppColors.primaryDim],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-            color: isOwn ? AppColors.surfaceContainerHigh : null,
-          ),
-          child: Container(
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.background,
-            ),
-            padding: const EdgeInsets.all(2),
-            child: isOwn
-                ? const Icon(Icons.add, color: AppColors.primary, size: 22)
-                : CircleAvatar(
-                    backgroundImage: avatarUrl != null
-                        ? NetworkImage(avatarUrl!)
-                        : null,
-                    onBackgroundImageError: avatarUrl != null
-                        ? (exception, stackTrace) {
-                            debugPrint('Error loading avatar: $exception');
-                          }
-                        : null,
-                    child: avatarUrl == null
-                        ? Text(name[0], style: AppTextStyles.label)
-                        : null,
-                  ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          name.isNotEmpty ? name.split(' ').first : 'User',
-          style: AppTextStyles.caption,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    ),
-    );
-  }
-}
 
 // ── Post Card ─────────────────────────────────────────────────────────────────
 
 class _PostCard extends ConsumerStatefulWidget {
-  final _MockPost post;
+  final _FeedPostData post;
   const _PostCard({super.key, required this.post});
 
   @override
