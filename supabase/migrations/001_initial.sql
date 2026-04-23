@@ -6,6 +6,7 @@ CREATE TABLE public.users (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
   email TEXT UNIQUE,
+  full_name TEXT,
   avatar_url TEXT,
   bio TEXT,
   website TEXT,
