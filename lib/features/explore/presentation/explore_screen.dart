@@ -13,6 +13,7 @@ import 'package:luxlog/shared/widgets/tag_chip.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
 import 'package:luxlog/features/gallery/providers/paginated_feed_notifier.dart';
 import 'package:luxlog/features/tags/providers/tag_provider.dart';
+import 'package:luxlog/features/explore/data/repositories/category_repository.dart';
 
 /// Explore / Search screen
 class ExploreScreen extends ConsumerStatefulWidget {
@@ -34,18 +35,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
   static const _tabs = ['Photos', 'People'];
 
-  static const _genres = [
-    ('Portrait', Icons.person_outline, 'https://picsum.photos/seed/g1/300/300'),
-    ('Landscape', Icons.landscape_outlined, 'https://picsum.photos/seed/g2/300/300'),
-    ('Street', Icons.location_city_outlined, 'https://picsum.photos/seed/g3/300/300'),
-    ('Wildlife', Icons.pets_outlined, 'https://picsum.photos/seed/g4/300/300'),
-    ('Architecture', Icons.apartment_outlined, 'https://picsum.photos/seed/g5/300/300'),
-    ('Black & White', Icons.contrast_outlined, 'https://picsum.photos/seed/g6/300/300'),
-    ('Macro', Icons.zoom_in_outlined, 'https://picsum.photos/seed/g7/300/300'),
-    ('Film', Icons.camera_roll_outlined, 'https://picsum.photos/seed/g8/300/300'),
-    ('Night', Icons.nights_stay_outlined, 'https://picsum.photos/seed/g9/300/300'),
-    ('Aerial', Icons.flight_outlined, 'https://picsum.photos/seed/g10/300/300'),
-  ];
+
 
   @override
   void initState() {
@@ -117,24 +107,31 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 child: Text('Browse by Genre', style: AppTextStyles.sectionHeader),
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                  childAspectRatio: 1.4,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, i) => _GenreTile(
-                    label: _genres[i].$1,
-                    icon: _genres[i].$2,
-                    imageUrl: _genres[i].$3,
+            ref.watch(categoriesProvider).when(
+              data: (categories) => SliverPadding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: 1.4,
                   ),
-                  childCount: _genres.length,
+                  delegate: SliverChildBuilderDelegate(
+                    (context, i) {
+                      final category = categories[i];
+                      return _GenreTile(
+                        label: category['name'] as String? ?? '',
+                        icon: Icons.category_outlined, // Real icons logic if DB stores code
+                        imageUrl: category['cover_image'] as String? ?? 'https://picsum.photos/seed/${category['id']}/300/300',
+                      );
+                    },
+                    childCount: categories.length,
+                  ),
                 ),
               ),
+              loading: () => const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator(color: AppColors.primary))),
+              error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
             ),
 
             // Trending tags
@@ -454,12 +451,12 @@ class _TrendingPhotoTile extends StatelessWidget {
   }
 }
 
-class _SearchResults extends StatelessWidget {
+class _SearchResults extends ConsumerWidget {
   final String query;
   const _SearchResults({required this.query});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (query.isEmpty) {
       return Center(
         child: Column(
@@ -473,32 +470,51 @@ class _SearchResults extends StatelessWidget {
         ),
       );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-      itemCount: 10,
-      itemBuilder: (context, i) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: _SearchResultItem(query: query, index: i),
-      ),
+    
+    return ref.watch(searchPhotosProvider(query)).when(
+      data: (photos) {
+        if (photos.isEmpty) {
+          return Center(
+            child: Text('No photos found for "$query"', style: AppTextStyles.body),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+          itemCount: photos.length,
+          itemBuilder: (context, i) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _SearchResultItem(photo: photos[i]),
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      error: (_, __) => Center(child: Text('Failed to search', style: AppTextStyles.body.copyWith(color: AppColors.error))),
     );
   }
 }
 
 class _SearchResultItem extends StatelessWidget {
-  final String query;
-  final int index;
-  const _SearchResultItem({required this.query, required this.index});
+  final Map<String, dynamic> photo;
+  const _SearchResultItem({required this.photo});
 
   @override
   Widget build(BuildContext context) {
+    final photoId = photo['id'] as String? ?? '';
+    final title = photo['title'] as String? ?? '';
+    final imageUrl = photo['image_url'] as String? ?? '';
+    final profile = photo['profiles'] as Map<String, dynamic>?;
+    final fullName = profile?['full_name'] as String?;
+    final username = profile?['username'] as String? ?? 'User';
+    final displayName = (fullName != null && fullName.isNotEmpty) ? fullName : username;
+
     return GestureDetector(
-      onTap: () => context.push('/photo/search_result_$index'),
+      onTap: () => context.push('/photo/$photoId'),
       child: Row(
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: CachedNetworkImage(
-              imageUrl: 'https://picsum.photos/seed/${query}_$index/100/100',
+              imageUrl: imageUrl,
               width: 60,
               height: 60,
               fit: BoxFit.cover,
@@ -509,8 +525,8 @@ class _SearchResultItem extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('"$query" shot #${index + 1}', style: AppTextStyles.label),
-                Text('by Photographer ${index + 1}',
+                Text(title.isNotEmpty ? title : 'Untitled', style: AppTextStyles.label),
+                Text('by $displayName',
                     style: AppTextStyles.bodySmall),
               ],
             ),

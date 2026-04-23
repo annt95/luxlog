@@ -180,11 +180,16 @@ class _ProfileHeader extends StatelessWidget {
 
     return Stack(
       children: [
-        // Cover image
+        // Cover background
         Positioned.fill(
-          child: CachedNetworkImage(
-            imageUrl: 'https://picsum.photos/seed/${username}_cover/800/400',
-            fit: BoxFit.cover,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.primaryContainer, AppColors.surfaceContainerHigh],
+              ),
+            ),
           ),
         ),
         // Dark gradient
@@ -513,8 +518,7 @@ class _PortfolioTab extends StatelessWidget {
                     block['type'] as String? ?? 'Creative work';
                 final cover =
                     block['image_url'] as String? ??
-                    block['cover_image'] as String? ??
-                    'https://picsum.photos/seed/${username}_proj_$i/800/400';
+                    block['cover_image'] as String?;
                 return GestureDetector(
                   onTap: () => context.push('/portfolio/edit/${username}_proj_$i'),
                   child: Container(
@@ -528,10 +532,15 @@ class _PortfolioTab extends StatelessWidget {
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          CachedNetworkImage(
-                            imageUrl: cover,
-                            fit: BoxFit.cover,
-                          ),
+                          if (cover != null && cover.isNotEmpty)
+                            CachedNetworkImage(
+                              imageUrl: cover,
+                              fit: BoxFit.cover,
+                            )
+                          else
+                            const DecoratedBox(
+                              decoration: BoxDecoration(color: AppColors.surfaceContainerHigh),
+                            ),
                           const DecoratedBox(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(

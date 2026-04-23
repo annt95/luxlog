@@ -274,7 +274,9 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
                   _StatsRow(likes: _likes),
 
                   // Comments section
-                  _CommentsSection(),
+                  _CommentsSection(
+                    comments: (photo['comments'] as List<dynamic>?) ?? [],
+                  ),
 
                   const SizedBox(height: 32),
                 ],
@@ -491,6 +493,9 @@ class _Stat extends StatelessWidget {
 // ── Comments ─────────────────────────────────────────────────────────────────
 
 class _CommentsSection extends StatelessWidget {
+  final List<dynamic> comments;
+  const _CommentsSection({required this.comments});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -501,7 +506,7 @@ class _CommentsSection extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
           child: Text('Comments', style: AppTextStyles.titleMedium),
         ),
-        // Comment input
+        // Comment input (taps to open bottom sheet in real app, handled by FeedScreen but here just a placeholder UI that says 'Add comment')
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
@@ -509,7 +514,7 @@ class _CommentsSection extends StatelessWidget {
               CircleAvatar(
                 radius: 16,
                 backgroundColor: AppColors.primaryContainer,
-                child: Text('A',
+                child: Text('U',
                     style: AppTextStyles.exifLabel
                         .copyWith(color: AppColors.primary)),
               ),
@@ -528,7 +533,7 @@ class _CommentsSection extends StatelessWidget {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Add a comment...',
+                      'Tap comment icon below to add...',
                       style: AppTextStyles.bodySmall,
                     ),
                   ),
@@ -538,26 +543,31 @@ class _CommentsSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        // Sample comments
-        ...List.generate(3, (i) => _CommentItem(index: i)),
+        // Actual comments
+        if (comments.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            child: Text('No comments yet.', style: TextStyle(color: AppColors.onSurfaceVariant)),
+          )
+        else
+          ...comments.take(3).map((c) => _CommentItem(comment: c as Map<String, dynamic>)),
       ],
     );
   }
 }
 
 class _CommentItem extends StatelessWidget {
-  final int index;
-  const _CommentItem({required this.index});
-
-  static const _comments = [
-    ('Sarah K.', 'Absolutely stunning! The bokeh is silky smooth 😍'),
-    ('Alex M.', 'Which filter did you use? The colors are incredible.'),
-    ('Rio P.', 'The 35GM is such a phenomenal lens, great shot!'),
-  ];
+  final Map<String, dynamic> comment;
+  const _CommentItem({required this.comment});
 
   @override
   Widget build(BuildContext context) {
-    final c = _comments[index % _comments.length];
+    final profile = comment['profiles'] as Map<String, dynamic>?;
+    final fullName = profile?['full_name'] as String?;
+    final username = profile?['username'] as String? ?? 'User';
+    final displayName = (fullName != null && fullName.isNotEmpty) ? fullName : username;
+    final text = comment['text'] as String? ?? '';
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
       child: Row(
@@ -567,7 +577,7 @@ class _CommentItem extends StatelessWidget {
             radius: 16,
             backgroundColor: AppColors.surfaceContainerHighest,
             child: Text(
-              c.$1[0],
+              displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
               style: AppTextStyles.exifLabel,
             ),
           ),
@@ -576,9 +586,9 @@ class _CommentItem extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(c.$1, style: AppTextStyles.label),
+                Text(displayName, style: AppTextStyles.label),
                 const SizedBox(height: 2),
-                Text(c.$2, style: AppTextStyles.body.copyWith(height: 1.4)),
+                Text(text, style: AppTextStyles.body.copyWith(height: 1.4)),
               ],
             ),
           ),
@@ -590,45 +600,58 @@ class _CommentItem extends StatelessWidget {
 
 // ── Related Photos ────────────────────────────────────────────────────────────
 
-class _RelatedPhotos extends StatelessWidget {
+class _RelatedPhotos extends ConsumerWidget {
   final String photoId;
   const _RelatedPhotos({required this.photoId});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.surfaceContainerLow,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-            child: Text('More like this', style: AppTextStyles.titleLarge),
-          ),
-          SizedBox(
-            height: 200,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: 8,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, i) => ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: CachedNetworkImage(
-                    imageUrl:
-                        'https://picsum.photos/seed/rel_${photoId}_$i/400/400',
-                    fit: BoxFit.cover,
-                  ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref.watch(relatedPhotosProvider(photoId)).when(
+      data: (photos) {
+        if (photos.isEmpty) return const SizedBox.shrink();
+        return Container(
+          color: AppColors.surfaceContainerLow,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                child: Text('More like this', style: AppTextStyles.titleLarge),
+              ),
+              SizedBox(
+                height: 200,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: photos.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, i) {
+                    final photo = photos[i];
+                    final pId = photo['id'] as String;
+                    final url = photo['image_url'] as String? ?? '';
+                    return GestureDetector(
+                      onTap: () => context.push('/photo/$pId'),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: AspectRatio(
+                          aspectRatio: 1,
+                          child: CachedNetworkImage(
+                            imageUrl: url,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
-            ),
+              const SizedBox(height: 32),
+            ],
           ),
-          const SizedBox(height: 32),
-        ],
-      ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 }

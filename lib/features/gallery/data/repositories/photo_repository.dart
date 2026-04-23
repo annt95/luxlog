@@ -449,4 +449,49 @@ class PhotoRepository {
       throw NetworkException('Lỗi tải ảnh đã lưu', cause: e, stackTrace: stackTrace);
     }
   }
+  Future<List<Map<String, dynamic>>> fetchRelatedPhotos(String photoId, {int limit = 10}) async {
+    try {
+      final response = await _client
+          .from('photos')
+          .select('*, profiles!photos_user_id_fkey(username, avatar_url, full_name)')
+          .neq('id', photoId)
+          .order('created_at', ascending: false)
+          .limit(limit);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchPhotosByTag(String tag, {int page = 0, int limit = 30}) async {
+    try {
+      final response = await _client
+          .from('photos')
+          .select('*, profiles!photos_user_id_fkey(username, avatar_url, full_name), photo_tags!inner(tags!inner(name))')
+          .eq('photo_tags.tags.name', tag)
+          .order('created_at', ascending: false)
+          .range(page * limit, (page + 1) * limit - 1);
+      return List<Map<String, dynamic>>.from(response);
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException('Lỗi tải ảnh theo hashtag (${e.code ?? 'unknown'})', cause: e, stackTrace: stackTrace);
+    } catch (e, stackTrace) {
+      throw NetworkException('Lỗi tải ảnh theo hashtag', cause: e, stackTrace: stackTrace);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> searchPhotos(String query, {int page = 0, int limit = 30}) async {
+    try {
+      final response = await _client
+          .from('photos')
+          .select('*, profiles!photos_user_id_fkey(username, avatar_url, full_name)')
+          .ilike('title', '%$query%')
+          .order('created_at', ascending: false)
+          .range(page * limit, (page + 1) * limit - 1);
+      return List<Map<String, dynamic>>.from(response);
+    } on PostgrestException catch (e, stackTrace) {
+      throw NetworkException('Lỗi tìm kiếm ảnh (${e.code ?? 'unknown'})', cause: e, stackTrace: stackTrace);
+    } catch (e, stackTrace) {
+      throw NetworkException('Lỗi tìm kiếm ảnh', cause: e, stackTrace: stackTrace);
+    }
+  }
 }

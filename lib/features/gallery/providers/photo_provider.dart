@@ -24,6 +24,27 @@ Future<Map<String, dynamic>> photoDetail(PhotoDetailRef ref, String photoId) {
 
 // ── Manual providers (avoid build_runner dependency) ─────────────────────────
 
+final photoDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
+  final repo = ref.watch(photoRepositoryProvider);
+  return repo.fetchPhotoById(id);
+});
+
+final searchPhotosProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, query) async {
+  if (query.isEmpty) return [];
+  final repo = ref.watch(photoRepositoryProvider);
+  return repo.searchPhotos(query);
+});
+
+final relatedPhotosProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, photoId) async {
+  final repo = ref.watch(photoRepositoryProvider);
+  return repo.fetchRelatedPhotos(photoId);
+});
+
+final photosByTagProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, tag) async {
+  final repo = ref.watch(photoRepositoryProvider);
+  return repo.fetchPhotosByTag(tag);
+});
+
 final photoLikeStateProvider = FutureProvider.autoDispose.family<bool, String>((ref, photoId) {
   final repository = ref.watch(photoRepositoryProvider);
   return repository.hasLiked(photoId);
