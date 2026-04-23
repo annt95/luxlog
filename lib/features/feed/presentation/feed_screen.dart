@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -74,40 +75,41 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           ...feedAsync.when(
             data: (photos) {
               final posts = photos.map(_MockPost.fromRow).toList();
+              if (posts.isEmpty) {
+                return <Widget>[
+                  const SliverFillRemaining(
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.feed_outlined, size: 60, color: AppColors.onSurfaceVariant),
+                          SizedBox(height: 16),
+                          Text(
+                            'No posts found yet.',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ];
+              }
               return <Widget>[
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, i) {
-                      if (posts.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.all(40),
-                          child: Center(
-                            child: Column(
-                              children: [
-                                Icon(Icons.feed_outlined, size: 60, color: AppColors.onSurfaceVariant),
-                                SizedBox(height: 16),
-                                Text(
-                                  'No posts found yet.',
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }
-                      if (i >= posts.length) return _LoadingIndicator();
                       return _PostCard(
                         key: ValueKey(posts[i].id),
                         post: posts[i],
                       );
                     },
-                    childCount: posts.isEmpty ? 1 : posts.length + 1,
+                    childCount: posts.length,
                   ),
                 ),
               ];
             },
             loading: () => <Widget>[
-              SliverFillRemaining(
+              const SliverFillRemaining(
                 child: SkeletonFeedWidget(),
               ),
             ],
@@ -380,33 +382,23 @@ class _StoryBubble extends StatelessWidget {
 
 // ── Post Card ─────────────────────────────────────────────────────────────────
 
-class _PostCard extends StatefulWidget {
+class _PostCard extends ConsumerStatefulWidget {
   final _MockPost post;
   const _PostCard({super.key, required this.post});
 
   @override
-  State<_PostCard> createState() => _PostCardState();
+  ConsumerState<_PostCard> createState() => _PostCardState();
 }
 
-class _PostCardState extends State<_PostCard> {
+class _PostCardState extends ConsumerState<_PostCard> {
   late bool _liked;
   late int _likes;
-  bool _saved = false;
 
   @override
   void initState() {
     super.initState();
     _liked = widget.post.isLiked;
     _likes = widget.post.likes;
-    _loadSaveState();
-  }
-
-  void _loadSaveState() {
-    final container = ProviderScope.containerOf(context, listen: false);
-    final repo = container.read(photoRepositoryProvider);
-    repo.hasSaved(widget.post.id).then((saved) {
-      if (mounted) setState(() => _saved = saved);
-    });
   }
 
   void _handleDoubleTap() {
@@ -421,8 +413,7 @@ class _PostCardState extends State<_PostCard> {
       _likes += _liked ? 1 : -1;
     });
     // Fire-and-forget to backend
-    final container = ProviderScope.containerOf(context, listen: false);
-    final repo = container.read(photoRepositoryProvider);
+    final repo = ref.read(photoRepositoryProvider);
     if (_liked) {
       repo.likePhoto(widget.post.id).catchError((_) {
         if (mounted) setState(() { _liked = false; _likes--; });
@@ -440,29 +431,34 @@ class _PostCardState extends State<_PostCard> {
   }
 
   void _toggleSave() {
-    setState(() => _saved = !_saved);
-    final container = ProviderScope.containerOf(context, listen: false);
-    final repo = container.read(photoRepositoryProvider);
-    if (_saved) {
-      repo.savePhoto(widget.post.id).catchError((_) {
-        if (mounted) setState(() => _saved = false);
-      });
+    final repo = ref.read(photoRepositoryProvider);
+    final currentState = ref.read(photoSaveStateProvider(widget.post.id));
+    final wasSaved = currentState.valueOrNull ?? false;
+
+    if (wasSaved) {
+      repo.unsavePhoto(widget.post.id).then((_) {
+        ref.invalidate(photoSaveStateProvider(widget.post.id));
+      }).catchError((_) {});
     } else {
-      repo.unsavePhoto(widget.post.id).catchError((_) {
-        if (mounted) setState(() => _saved = true);
-      });
+      repo.savePhoto(widget.post.id).then((_) {
+        ref.invalidate(photoSaveStateProvider(widget.post.id));
+      }).catchError((_) {});
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Watch save state reactively — no N+1 initState calls
+    final saveAsync = ref.watch(photoSaveStateProvider(widget.post.id));
+    final saved = saveAsync.valueOrNull ?? false;
+
     final optimizedImageUrl = optimizeImageUrl(
       widget.post.imageUrl,
-      width: 1400,
+      width: 800,
       quality: 76,
     );
 
-    return Container(
+    Widget card = Container(
       color: AppColors.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -475,13 +471,33 @@ class _PostCardState extends State<_PostCard> {
             onDoubleTap: _handleDoubleTap,
             child: AspectRatio(
               aspectRatio: widget.post.aspect,
-              child: CachedNetworkImage(
-                imageUrl: optimizedImageUrl,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
-                  color: AppColors.surfaceContainerHigh,
-                ),
-              ),
+              child: kIsWeb
+                  ? Image.network(
+                      optimizedImageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: AppColors.surfaceContainerHigh,
+                        child: const Center(
+                          child: Icon(Icons.broken_image_outlined,
+                              color: AppColors.onSurfaceVariant, size: 32),
+                        ),
+                      ),
+                    )
+                  : CachedNetworkImage(
+                      imageUrl: optimizedImageUrl,
+                      fit: BoxFit.cover,
+                      memCacheWidth: 800,
+                      placeholder: (_, __) => Container(
+                        color: AppColors.surfaceContainerHigh,
+                      ),
+                      errorWidget: (_, __, ___) => Container(
+                        color: AppColors.surfaceContainerHigh,
+                        child: const Center(
+                          child: Icon(Icons.broken_image_outlined,
+                              color: AppColors.onSurfaceVariant, size: 32),
+                        ),
+                      ),
+                    ),
             ),
           ),
 
@@ -501,8 +517,9 @@ class _PostCardState extends State<_PostCard> {
                 backgroundColor: Colors.transparent,
                 builder: (_) => CommentBottomSheet(photoId: widget.post.id),
               );
-            },            onShare: _sharePost,
-            saved: _saved,
+            },
+            onShare: _sharePost,
+            saved: saved,
             onSave: _toggleSave,
           ),
 
@@ -517,7 +534,11 @@ class _PostCardState extends State<_PostCard> {
           Container(height: 8, color: AppColors.surfaceContainerLow),
         ],
       ),
-    ).animate().fadeIn(duration: 250.ms);
+    );
+
+    // Skip heavy animations on Web to avoid jank
+    if (kIsWeb) return card;
+    return card.animate().fadeIn(duration: 250.ms);
   }
 }
 
@@ -741,17 +762,5 @@ class _PostCaption extends StatelessWidget {
   }
 }
 
-class _LoadingIndicator extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(32),
-      child: Center(
-        child: CircularProgressIndicator(
-          color: AppColors.primary,
-          strokeWidth: 1.5,
-        ),
-      ),
-    );
-  }
-}
+// _LoadingIndicator removed — no pagination logic exists yet.
+// Re-add when infinite scroll / lazy loading is implemented.

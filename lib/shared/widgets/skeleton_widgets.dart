@@ -37,6 +37,8 @@ class SkeletonFeedWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
       padding: const EdgeInsets.symmetric(vertical: 16),
       itemCount: 3,
       separatorBuilder: (_, __) => const SizedBox(height: 32),
