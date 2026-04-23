@@ -12,6 +12,7 @@ import 'package:luxlog/core/services/image_url_optimizer.dart';
 import 'package:luxlog/features/gallery/presentation/widgets/comment_bottom_sheet.dart';
 import 'package:luxlog/shared/widgets/skeleton_widgets.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
+import 'package:luxlog/features/gallery/providers/paginated_feed_notifier.dart';
 
 /// Module 2: Social Feed — Instagram-like following feed
 class FeedScreen extends ConsumerStatefulWidget {
@@ -27,20 +28,37 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   int _selectedTab = 0; // 0: For You, 1: Following
 
   @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
 
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 300) {
+      // Near bottom — trigger load more
+      if (_selectedTab == 0) {
+        ref.read(paginatedFeedProvider.notifier).loadMore();
+      } else {
+        ref.read(paginatedFollowFeedProvider.notifier).loadMore();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final AsyncValue<List<Map<String, dynamic>>> feedAsync;
+    final AsyncValue<PaginatedFeedState> feedAsync;
     if (_selectedTab == 1) {
-      feedAsync = ref.watch(followingFeedProvider(0));
+      feedAsync = ref.watch(paginatedFollowFeedProvider);
     } else {
-      feedAsync = ref.watch(
-        photoFeedProvider(page: 0, limit: 24, tab: 'for-you'),
-      );
+      feedAsync = ref.watch(paginatedFeedProvider);
     }
 
     return Scaffold(
@@ -49,7 +67,11 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         color: AppColors.primary,
         backgroundColor: AppColors.surfaceContainerHigh,
         onRefresh: () async {
-          ref.invalidate(photoFeedProvider);
+          if (_selectedTab == 0) {
+            await ref.read(paginatedFeedProvider.notifier).refresh();
+          } else {
+            await ref.read(paginatedFollowFeedProvider.notifier).refresh();
+          }
         },
         child: CustomScrollView(
           controller: _scrollController,
@@ -73,8 +95,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
           // Post feed
           ...feedAsync.when(
-            data: (photos) {
-              final posts = photos.map(_MockPost.fromRow).toList();
+            data: (feedState) {
+              final posts = feedState.items.map(_MockPost.fromRow).toList();
               if (posts.isEmpty) {
                 return <Widget>[
                   const SliverFillRemaining(
@@ -98,12 +120,18 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, i) {
+                      // Last item: show loading indicator if loading more
+                      if (i == posts.length) {
+                        return feedState.hasMore
+                            ? const _LoadMoreIndicator()
+                            : const _EndOfFeedIndicator();
+                      }
                       return _PostCard(
                         key: ValueKey(posts[i].id),
                         post: posts[i],
                       );
                     },
-                    childCount: posts.length,
+                    childCount: posts.length + 1,
                   ),
                 ),
               ];
@@ -117,7 +145,13 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
               SliverFillRemaining(
                 child: ErrorRetryWidget(
                   message: 'Failed to load feed',
-                  onRetry: () => ref.invalidate(photoFeedProvider),
+                  onRetry: () {
+                    if (_selectedTab == 0) {
+                      ref.read(paginatedFeedProvider.notifier).refresh();
+                    } else {
+                      ref.read(paginatedFollowFeedProvider.notifier).refresh();
+                    }
+                  },
                 ),
               ),
             ],
@@ -126,6 +160,53 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           const SliverToBoxAdapter(child: SizedBox(height: 96)),
         ],
       ),
+      ),
+    );
+  }
+}
+
+// ── Load More / End indicators ────────────────────────────────────────────────
+
+class _LoadMoreIndicator extends StatelessWidget {
+  const _LoadMoreIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      alignment: Alignment.center,
+      child: const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: AppColors.primary,
+        ),
+      ),
+    );
+  }
+}
+
+class _EndOfFeedIndicator extends StatelessWidget {
+  const _EndOfFeedIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      alignment: Alignment.center,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(width: 20, height: 1, color: AppColors.outlineVariant),
+          const SizedBox(width: 8),
+          Text(
+            'You\'re all caught up',
+            style: AppTextStyles.caption.copyWith(color: AppColors.onSurfaceVariant),
+          ),
+          const SizedBox(width: 8),
+          Container(width: 20, height: 1, color: AppColors.outlineVariant),
+        ],
       ),
     );
   }
@@ -761,6 +842,3 @@ class _PostCaption extends StatelessWidget {
     );
   }
 }
-
-// _LoadingIndicator removed — no pagination logic exists yet.
-// Re-add when infinite scroll / lazy loading is implemented.

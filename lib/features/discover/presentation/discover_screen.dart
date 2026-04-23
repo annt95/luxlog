@@ -10,6 +10,7 @@ import 'package:luxlog/shared/widgets/error_retry_widget.dart';
 import 'package:luxlog/core/services/image_url_optimizer.dart';
 import 'package:luxlog/shared/widgets/photo_card.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
+import 'package:luxlog/features/gallery/providers/paginated_feed_notifier.dart';
 import 'package:luxlog/features/tags/providers/category_provider.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -28,13 +29,24 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   @override
   void initState() {
     super.initState();
-    // Categories will be loaded via provider
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 400) {
+      // Only paginate for "All" filter (index 0) — others use separate providers
+      if (_selectedFilter == 0) {
+        ref.read(paginatedDiscoverProvider.notifier).loadMore();
+      }
+    }
   }
 
   @override
@@ -51,34 +63,17 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
       _selectedFilter = 0;
     }
 
-    // Load photo feed — filtered by selected category
-    final AsyncValue<List<Map<String, dynamic>>> feedAsync;
-    if (_selectedFilter == 0) {
-      // "All" — show all photos
-      feedAsync = ref.watch(photoFeedProvider(page: 0, limit: 24));
-    } else if (_selectedFilter == 1) {
-      // "Trending" — sort by likes
-      feedAsync = ref.watch(editorsPickProvider).whenData(
-        (photos) => photos,
-      );
-    } else {
-      // Category-specific filter
-      final categoryIndex = _selectedFilter - 2;
-      if (categoryIndex < categories.length) {
-        final slug = categories[categoryIndex]['slug'] as String? ?? categories[categoryIndex]['name'] as String? ?? '';
-        feedAsync = ref.watch(categoryPhotosProvider(slug));
-      } else {
-        feedAsync = ref.watch(photoFeedProvider(page: 0, limit: 24));
-      }
-    }
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: RefreshIndicator(
         color: AppColors.primary,
         backgroundColor: AppColors.surfaceContainerHigh,
         onRefresh: () async {
-          ref.invalidate(photoFeedProvider);
+          if (_selectedFilter == 0) {
+            await ref.read(paginatedDiscoverProvider.notifier).refresh();
+          } else {
+            ref.invalidate(photoFeedProvider);
+          }
           ref.invalidate(categoriesProvider);
         },
         child: CustomScrollView(
@@ -131,75 +126,157 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
             ),
           ),
 
-          // ── Photo Grid (Uniform) ─────────────────────────────
-          feedAsync.when(
-            data: (photos) => SliverPadding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
-              sliver: SliverGrid(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: _crossAxisCount(context),
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.72, // 3:4 portrait cards
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, i) {
-                    final p = photos[i];
-                    final profile = p['profiles'] as Map<String, dynamic>?;
-                    final fullName = profile?['full_name'] as String?;
-                    final username = profile?['username'] as String? ?? 'Unknown';
-                    return PhotoCard(
-                      photoId: p['id'] as String,
-                      imageUrl: p['image_url'] as String? ?? '',
-                      photographerName: (fullName != null && fullName.isNotEmpty) ? fullName : username,
-                      photographerAvatar: profile?['avatar_url'] as String?,
-                      photographerUsername: username,
-                      title: p['title'] as String?,
-                      likes: p['likes_count'] as int? ?? 0,
-                      camera: p['camera'] as String? ?? p['film_camera'] as String?,
-                      filmStock: p['film_stock'] as String?,
-                      lens: p['lens'] as String?,
-                    );
-                  },
-                  childCount: photos.length,
-                ),
-              ),
-            ),
-            loading: () => SliverPadding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
-              sliver: SliverGrid(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: _crossAxisCount(context),
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.72,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, i) {
-                    return Shimmer.fromColors(
-                      baseColor: AppColors.surfaceContainerHigh,
-                      highlightColor: AppColors.surfaceContainerHighest,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    );
-                  },
-                  childCount: 6,
-                ),
-              ),
-            ),
-            error: (e, _) => SliverFillRemaining(
-              child: ErrorRetryWidget(
-                message: 'Error loading feed',
-                onRetry: () => ref.invalidate(photoFeedProvider),
-              ),
-            ),
-          ),
+          // ── Photo Grid — paginated for "All", static for others ──────
+          _buildPhotoGrid(context, categories),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 96)),
         ],
       ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoGrid(BuildContext context, List<Map<String, dynamic>> categories) {
+    if (_selectedFilter == 0) {
+      // "All" — use paginated provider
+      return _buildPaginatedGrid(context);
+    } else if (_selectedFilter == 1) {
+      // "Trending"
+      final feedAsync = ref.watch(editorsPickProvider);
+      return _buildStaticGrid(context, feedAsync);
+    } else {
+      // Category filter
+      final categoryIndex = _selectedFilter - 2;
+      if (categoryIndex < categories.length) {
+        final slug = categories[categoryIndex]['slug'] as String? ?? categories[categoryIndex]['name'] as String? ?? '';
+        final feedAsync = ref.watch(categoryPhotosProvider(slug));
+        return _buildStaticGrid(context, feedAsync);
+      }
+      final feedAsync = ref.watch(photoFeedProvider(page: 0, limit: 24));
+      return _buildStaticGrid(context, feedAsync);
+    }
+  }
+
+  Widget _buildPaginatedGrid(BuildContext context) {
+    final feedAsync = ref.watch(paginatedDiscoverProvider);
+
+    return feedAsync.when(
+      data: (feedState) => SliverPadding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+        sliver: SliverGrid(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: _crossAxisCount(context),
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 0.72,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, i) {
+              if (i == feedState.items.length) {
+                // Loading more indicator as last grid item
+                return feedState.hasMore
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink();
+              }
+              final p = feedState.items[i];
+              return _buildPhotoCard(p);
+            },
+            childCount: feedState.items.length + (feedState.hasMore ? 1 : 0),
+          ),
+        ),
+      ),
+      loading: () => _buildShimmerGrid(context),
+      error: (e, _) => SliverFillRemaining(
+        child: ErrorRetryWidget(
+          message: 'Error loading feed',
+          onRetry: () => ref.read(paginatedDiscoverProvider.notifier).refresh(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStaticGrid(BuildContext context, AsyncValue<List<Map<String, dynamic>>> feedAsync) {
+    return feedAsync.when(
+      data: (photos) => SliverPadding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+        sliver: SliverGrid(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: _crossAxisCount(context),
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 0.72,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, i) => _buildPhotoCard(photos[i]),
+            childCount: photos.length,
+          ),
+        ),
+      ),
+      loading: () => _buildShimmerGrid(context),
+      error: (e, _) => SliverFillRemaining(
+        child: ErrorRetryWidget(
+          message: 'Error loading feed',
+          onRetry: () => ref.invalidate(photoFeedProvider),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoCard(Map<String, dynamic> p) {
+    final profile = p['profiles'] as Map<String, dynamic>?;
+    final fullName = profile?['full_name'] as String?;
+    final username = profile?['username'] as String? ?? 'Unknown';
+    return PhotoCard(
+      photoId: p['id'] as String,
+      imageUrl: p['image_url'] as String? ?? '',
+      photographerName: (fullName != null && fullName.isNotEmpty) ? fullName : username,
+      photographerAvatar: profile?['avatar_url'] as String?,
+      photographerUsername: username,
+      title: p['title'] as String?,
+      likes: p['likes_count'] as int? ?? 0,
+      camera: p['camera'] as String? ?? p['film_camera'] as String?,
+      filmStock: p['film_stock'] as String?,
+      lens: p['lens'] as String?,
+    );
+  }
+
+  Widget _buildShimmerGrid(BuildContext context) {
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+      sliver: SliverGrid(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: _crossAxisCount(context),
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.72,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, i) {
+            return Shimmer.fromColors(
+              baseColor: AppColors.surfaceContainerHigh,
+              highlightColor: AppColors.surfaceContainerHighest,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            );
+          },
+          childCount: 6,
+        ),
       ),
     );
   }
@@ -278,18 +355,6 @@ class _GlassAppBarDelegate extends SliverPersistentHeaderDelegate {
                     ],
                   ),
                   const Spacer(),
-                  // Search — tạm ẩn theo yêu cầu
-                  // IconButton(
-                  //   icon: const Icon(Icons.search, size: 22),
-                  //   color: AppColors.onSurfaceVariant,
-                  //   onPressed: () {},
-                  // ),
-                  // Notifications — tạm ẩn theo yêu cầu
-                  // IconButton(
-                  //   icon: const Icon(Icons.notifications_outlined, size: 22),
-                  //   color: AppColors.onSurfaceVariant,
-                  //   onPressed: () => context.push('/notifications'),
-                  // ),
                   // Avatar
                   const SizedBox(width: 4),
                   ref.watch(currentUserProfileProvider).when(

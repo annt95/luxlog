@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:luxlog/app/theme.dart';
 import 'package:luxlog/shared/widgets/tag_chip.dart';
 import 'package:luxlog/features/gallery/providers/photo_provider.dart';
+import 'package:luxlog/features/gallery/providers/paginated_feed_notifier.dart';
 import 'package:luxlog/features/tags/providers/tag_provider.dart';
 
 /// Explore / Search screen
@@ -24,6 +26,7 @@ class ExploreScreen extends ConsumerStatefulWidget {
 class _ExploreScreenState extends ConsumerState<ExploreScreen>
     with TickerProviderStateMixin {
   final _searchCtrl = TextEditingController();
+  final _scrollController = ScrollController();
   late final TabController _tabCtrl;
   bool _searching = false;
   String _query = '';
@@ -48,6 +51,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: _tabs.length, vsync: this);
+    _scrollController.addListener(_onScroll);
     // Restore search query from URL if present
     if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
       _query = widget.initialQuery!;
@@ -56,9 +60,19 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     }
   }
 
+  void _onScroll() {
+    if (!_searching &&
+        _scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 400) {
+      ref.read(paginatedDiscoverProvider.notifier).loadMore();
+    }
+  }
+
   @override
   void dispose() {
     _debounce?.cancel();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _searchCtrl.dispose();
     _tabCtrl.dispose();
     super.dispose();
@@ -69,6 +83,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
+        controller: _scrollController,
         slivers: [
           // Glass AppBar + search
           SliverPersistentHeader(
@@ -178,19 +193,36 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 ),
               ),
             ),
-            ...ref.watch(photoFeedProvider(page: 0, limit: 18)).when(
-              data: (photos) => <Widget>[
+            ...ref.watch(paginatedDiscoverProvider).when(
+              data: (feedState) => <Widget>[
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                   sliver: SliverMasonryGrid.count(
                     crossAxisCount: 3,
                     mainAxisSpacing: 6,
                     crossAxisSpacing: 6,
-                    childCount: photos.length,
+                    childCount: feedState.items.length,
                     itemBuilder: (context, i) =>
-                        _TrendingPhotoTile(photo: photos[i]),
+                        _TrendingPhotoTile(photo: feedState.items[i]),
                   ),
                 ),
+                if (feedState.hasMore)
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                const SliverToBoxAdapter(child: SizedBox(height: 80)),
               ],
               loading: () => <Widget>[
                 SliverPadding(
@@ -415,7 +447,10 @@ class _TrendingPhotoTile extends StatelessWidget {
           ),
         ),
       ),
-    ).animate(delay: Duration(milliseconds: photoIndex % 300)).fadeIn();
+    );
+    // Skip heavy per-tile animations on Web to prevent jank
+    if (kIsWeb) return tile;
+    return tile.animate(delay: Duration(milliseconds: photoIndex % 300)).fadeIn();
   }
 }
 

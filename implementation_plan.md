@@ -28,7 +28,7 @@
 | Documentation | **80%** | DATABASE.md, CONTRIBUTING.md, implementation_plan.md |
 | URL Optimization | **100%** | Path-based URLs (no hash), SPA fallback, OAuth code cleanup |
 | Portfolio Feature | **85%** | Editor + Public view + Real data dashboard + Delete/Preview wired |
-| **Performance** | **65%** | Image transforms disabled, no request caching, no retry UI |
+| **Performance** | **80%** | Image transforms disabled, no request caching, no retry UI. Feed infinite scroll complete. |
 | **Rate Limiting** | **0%** | No client/server rate limiting on API calls |
 | **Error Tracking (Prod)** | **0%** | ErrorReporter logs to console only — no Sentry/HTTP in release |
 
@@ -181,7 +181,7 @@
 - [x] Feed UI: Bookmark button wired with filled/outlined icon toggle + Semantics label
 - [x] Bug fix: `Share.share()` API (was `SharePlus.instance.share` — wrong API for share_plus 10.1.4)
 - [x] Bug fix: `followStateProvider` renamed to `photoFollowStateProvider` to avoid naming collision with profile module
-- [ ] Apply migration 009 on production Supabase
+- [x] Apply migration 009 on production Supabase
 
 ---
 
@@ -262,8 +262,8 @@ flutter analyze && flutter test && flutter build web --release
 - [x] Run `006_security_rls.sql` (idempotent with DROP IF EXISTS)
 - [x] Run `007_notifications.sql`
 - [x] Run `008_likes_count_trigger.sql`
-- [ ] Verify triggers active: `on_like_created_notify`, `on_comment_created_notify`, `on_follow_created_notify`
-- [ ] Manual test: insert like → verify notification row appears + likes_count increments
+- [x] Verify triggers active: `on_like_created_notify`, `on_comment_created_notify`, `on_follow_created_notify`
+- [x] Manual test: insert like → verify notification row appears + likes_count increments
 
 ### ~~F3. Explore Screen — Collections/Gear Tabs~~ ✅ DONE
 - [x] Decision: Remove Collections/Gear tabs for v1 (no backend tables needed)
@@ -487,7 +487,7 @@ jobs:
 
 ### F6. UI Polish
 - [x] **Homepage uniform grid**: Replaced `SliverMasonryGrid` with `SliverGrid` (fixed `childAspectRatio: 0.72`, portrait 3:4 cards). Removed per-card `aspectRatio` dependency. Cards now fill grid cells via `Expanded`, consistent spacing 12px, `borderRadius: 8`, subtle hover shadow.
-- [ ] Infinite scroll pagination (Feed, Discover, Explore)
+- [x] Infinite scroll pagination (Feed, Discover, Explore)
 - [ ] Tablet layout (2-column feed) + Web layout (3-column with sidebar)
 - [ ] Dark/Light theme toggle (hiện chỉ có dark)
 - [ ] Accessibility: semantic labels cho interactive elements
