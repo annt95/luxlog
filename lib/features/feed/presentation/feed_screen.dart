@@ -413,9 +413,19 @@ class _StoryBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isOwn ? 'Tạo Story mới (Coming soon)' : 'Xem Story của $name (Coming soon)'),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
         Container(
           width: 52,
           height: 52,
@@ -462,6 +472,7 @@ class _StoryBubble extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
       ],
+    ),
     );
   }
 }
