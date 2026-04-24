@@ -271,7 +271,7 @@ class _PhotoDetailScreenState extends ConsumerState<PhotoDetailScreen> {
                   ),
 
                   // Stats row
-                  _StatsRow(likes: _likes),
+                  _StatsRow(likes: _likes, views: photo['views_count'] as int? ?? 0),
 
                   // Comments section
                   _CommentsSection(
@@ -451,7 +451,8 @@ class _ActionButton extends StatelessWidget {
 
 class _StatsRow extends StatelessWidget {
   final int likes;
-  const _StatsRow({required this.likes});
+  final int views;
+  const _StatsRow({required this.likes, required this.views});
 
   @override
   Widget build(BuildContext context) {
@@ -459,15 +460,15 @@ class _StatsRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
-          _Stat(value: '$likes', label: 'likes'),
+          _Stat(value: _fmt(likes), label: 'likes'),
           const SizedBox(width: 24),
-          _Stat(value: '18.4k', label: 'views'),
-          const SizedBox(width: 24),
-          _Stat(value: '342', label: 'downloads'),
+          _Stat(value: _fmt(views), label: 'views'),
         ],
       ),
     );
   }
+
+  static String _fmt(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}k' : '$n';
 }
 
 class _Stat extends StatelessWidget {

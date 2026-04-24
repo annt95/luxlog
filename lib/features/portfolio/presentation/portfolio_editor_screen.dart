@@ -704,11 +704,9 @@ class _PropertiesPanel extends StatelessWidget {
             const SizedBox(height: 16),
             Text('Analytics', style: AppTextStyles.exifLabel),
             const SizedBox(height: 10),
-            _StatsRow(label: 'Views', value: '2,847', icon: Icons.visibility_outlined),
-            const SizedBox(height: 6),
-            _StatsRow(label: 'Likes', value: '341', icon: Icons.favorite_border),
-            const SizedBox(height: 6),
-            _StatsRow(label: 'Inquiries', value: '12', icon: Icons.mail_outline),
+            Text('Coming soon',
+                style: AppTextStyles.caption.copyWith(
+                    color: AppColors.onSurfaceVariant)),
 
             const SizedBox(height: 20),
             const _Divider(),
