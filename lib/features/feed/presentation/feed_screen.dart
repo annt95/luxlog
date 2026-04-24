@@ -530,7 +530,7 @@ class _PostCardState extends ConsumerState<_PostCard> {
 }
 
 class _PostHeader extends StatelessWidget {
-  final _MockPost post;
+  final _FeedPostData post;
   const _PostHeader({required this.post});
 
   @override

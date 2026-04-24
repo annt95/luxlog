@@ -1,6 +1,6 @@
 # Luxlog — Implementation Progress Tracker
 
-## 📅 Cập nhật lần cuối: 2026-04-20 (Phase J Production Hardening Audit)
+## 📅 Cập nhật lần cuối: 2026-04-24 (Phase K Mock Data Elimination)
 
 > Tổng hợp tiến độ triển khai dự án Luxlog dựa trên rà soát toàn bộ mã nguồn thực tế,
 > đối chiếu với PLAN.md và WALKTHROUGH.md.
@@ -221,6 +221,16 @@
 ### Phase I-C: Block Type Alignment + Public View
 - [x] Public portfolio `_renderBlock()` adapted to editor format (`coverImage`/`text`/`photoGrid`/`divider`/`contactForm`)
 - [x] Share button wired on public portfolio view
+
+---
+
+## ✅ Phase K — Mock Data Elimination (NEW 2026-04-24)
+
+- [x] **Explore Screen**: Replace static `_genres` with `categoriesProvider`, and dummy search results with `searchPhotosProvider`.
+- [x] **Photo Detail Screen**: Replace dummy comments with relations from `photoAsync`, and static related photos grid with `relatedPhotosProvider`.
+- [x] **Profile Screen**: Replace random cover image with dark gradient, remove dummy portfolio blocks, use only `userPortfoliosProvider`.
+- [x] **Tag Feed Screen**: Refactor to `ConsumerWidget`, fetch real photos based on tags using `photosByTagProvider`.
+- [x] **Infrastructure**: Ensure all local placeholder lists (e.g., `picsum.photos`) are entirely removed from the codebase.
 
 ---
 

@@ -24,10 +24,7 @@ Future<Map<String, dynamic>> photoDetail(PhotoDetailRef ref, String photoId) {
 
 // ── Manual providers (avoid build_runner dependency) ─────────────────────────
 
-final photoDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
-  final repo = ref.watch(photoRepositoryProvider);
-  return repo.fetchPhotoById(id);
-});
+
 
 final searchPhotosProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, query) async {
   if (query.isEmpty) return [];
