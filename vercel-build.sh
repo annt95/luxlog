@@ -23,8 +23,8 @@ flutter pub get
 echo "Running code generation (Riverpod, Freezed, JSON)..."
 dart run build_runner build --delete-conflicting-outputs
 
-echo "Building web..."
-flutter build web --release --base-href / \
+echo "Building web (WASM enabled)..."
+flutter build web --wasm --base-href / \
   --dart-define=SUPABASE_URL=${SUPABASE_URL:-""} \
   --dart-define=SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-""} \
   --dart-define=SENTRY_DSN=${SENTRY_DSN:-""}
