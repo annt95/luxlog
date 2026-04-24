@@ -1,43 +1,26 @@
-# E4. Photo Upload + Film Mode & Security Hardening — Walkthrough
+# Phase K: Mock Data Elimination & Full Backend Wiring — Walkthrough
 
-Đã hoàn thành toàn bộ 2 workstream quan trọng: Hoàn thiện luồng Upload ảnh (bao gồm chế độ máy film) và thắt chặt bảo mật cho nền tảng Luxlog.
-
----
-
-## 📸 1. Hoàn thiện Photo Upload + Film Mode
-
-Chúng ta đã chuyển đổi từ luồng upload "giả lập" sang luồng thật phối hợp với Supabase Storage và Real-time Metadata.
-
-### Các thay đổi chính:
-- **Database**: Chạy migration `003` thêm các cột `is_film`, `film_stock`, `film_camera`, `caption`, `license`, `allow_download`.
-- **PhotoRepository**: Implement logic upload dùng `uploadBinary` (tương thích web). Ảnh được lưu tại `photos/uploads/{userId}/{timestamp}.ext`.
-- **Upload Screen**:
-  - Chuyển sang `ConsumerStatefulWidget` để tích hợp Riverpod.
-  - Thêm tính năng **Film Mode**: Khi bật toggle "Shot on Film", người dùng có thể nhập thủ công tên máy film và loại film stock.
-  - Tích hợp validation: Giới hạn file size 20MB, kiểm tra độ dài title/caption.
-
-> [!TIP]
-> **Film Mode Activation**: Trong màn hình Details của upload, tìm biểu tượng 🎞️. Khi chọn, app sẽ bỏ qua GPS (nếu muốn) và cho phép bạn ghi lại "hồn" của bức ảnh film.
+Đã hoàn thành toàn bộ công việc thay thế dữ liệu tĩnh (mock data) bằng dữ liệu thật từ backend Supabase trên toàn bộ ứng dụng. Luxlog hiện tại 100% sử dụng dữ liệu thật.
 
 ---
 
-## 🔒 2. Security Hardening (Bảo mật)
+## 🧹 1. Loại bỏ Mock Data và Thay thế bằng Real Data
 
-Rà soát và triển khai các biện pháp bảo vệ dữ liệu người dùng và hệ thống.
+### Explore Screen
+- **Categories**: Thay thế danh sách `_genres` tĩnh bằng provider `categoriesProvider`, kéo dữ liệu thật từ table `categories` và hiển thị ảnh bìa thật.
+- **Search**: Thay vì hiển thị danh sách giả lập khi tìm kiếm, tích hợp `searchPhotosProvider` gọi trực tiếp API tìm kiếm trên Supabase theo keyword (với tính năng case-insensitive).
 
-### Các hạng mục bảo mật đã triển khai:
-1. **Row Level Security (RLS)**:
-   - Thêm migration `004` bổ sung policies còn thiếu cho: `photos` (DELETE), `comments`, `likes`, `follows`, `portfolios`.
-   - Đảm bảo chỉ chủ sở hữu mới có quyền xóa dữ liệu của mình.
-2. **Security Headers**:
-   - Cập nhật `vercel.json` với các headers: **CSP** (chỉ cho phép connect tới Supabase/trusted sources), **X-Frame-Options** (chống clickjacking), **HSTS**, and **Permissions-Policy**.
-3. **Input Validation**:
-   - **Signup**: Áp dụng RegExp kiểm tra format email, độ mạnh mật khẩu (8+ ký tự, 1 hoa, 1 số), và giới hạn tên hiển thị.
-   - **Upload**: Chặn file > 20MB ngay tại client.
-4. **Error Sanitization**:
-   - Loại bỏ việc hiển thị `e.toString()` thô cho người dùng. Sử dụng `AppException` để hiển thị message thân thiện và bảo mật (không leak cấu trúc folder/internal errors).
-5. **Clean Code**:
-   - Thay thế `print()` bằng `debugPrint()` trong `SupabaseService`.
+### Photo Detail Screen
+- **Comments**: Xoá danh sách `_comments` giả, liên kết trực tiếp với relation `comments` trả về từ `photoAsync` provider. Hiển thị đúng avatar, tên hiển thị và thời gian thật của bình luận.
+- **Related Photos ("More like this")**: Gỡ bỏ danh sách ảnh random từ `picsum.photos`, thay bằng `relatedPhotosProvider` để lấy các ảnh liên quan (cùng category hoặc tag) từ backend.
+
+### Profile Screen
+- **Cover Image**: Loại bỏ việc dùng ảnh random `picsum.photos` làm ảnh bìa. Thay vào đó sử dụng gradient tối màu theo thiết kế thống nhất (vì DB hiện tại không có trường `cover_image`).
+- **Portfolio Tab**: Dữ liệu fallback giả lập đã được gỡ bỏ hoàn toàn, tab Portfolio hiện tại chỉ render các dự án thật được lấy về từ `userPortfoliosProvider`.
+
+### Tag Feed Screen
+- **ConsumerWidget**: Refactor màn hình Tag Feed sang `ConsumerWidget` để lắng nghe state thay vì render danh sách tĩnh.
+- **Dynamic Photos**: Tích hợp `photosByTagProvider` để lấy trực tiếp danh sách ảnh gắn tag tương ứng từ Supabase. Cập nhật số lượng ảnh (count) theo dữ liệu trả về thật thay vì tính toán giả.
 
 ---
 
@@ -45,20 +28,11 @@ Rà soát và triển khai các biện pháp bảo vệ dữ liệu người dù
 
 ### 1. Phân tích mã nguồn
 - `flutter analyze`: Không có lỗi hoặc cảnh báo nghiêm trọng.
-- `dart run build_runner build`: Code generation cho `PhotoModel` thành công.
+- Hoàn toàn vắng bóng các lời gọi URL tới `picsum.photos` hay danh sách tĩnh.
 
 ### 2. Build Release
-- **Lệnh**: `flutter build web --release`
-- **Kết quả**: **SUCCESS (Exit code 0)**.
-- **Vesting**: Đã kiểm tra tính tương thích của bundle bundle web trên hệ thống cục bộ.
-
----
-
-## 🚀 Bước tiếp theo đề xuất (Next Steps)
-
-1. **Storage Policy**: Đừng quên truy cập Supabase Dashboard -> Storage để đảm bảo bucket `photos` đã được tạo và có policy cho phép authenticated users upload.
-2. **E5. Profile Management**: Bây giờ khi đã có thể upload ảnh, bước tiếp theo nên là hoàn thiện màn hình Profile để hiển thị danh sách ảnh người dùng đã đăng.
-3. **Analytics**: Tích hợp thêm logging cơ bản để theo dõi tỉ lệ upload lỗi (nếu có).
+- Đã thực hiện `git push` lên nhánh `main`.
+- Vercel đang tự động trigger build và deploy bản cập nhật cuối cùng.
 
 ---
 *Luxlog — Lưu giữ khoảnh khắc 35mm của bạn một cách an toàn và tinh tế.*
