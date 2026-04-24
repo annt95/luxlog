@@ -210,10 +210,11 @@ class _EndOfFeedIndicator extends StatelessWidget {
   }
 }
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
+// ── Feed Post Data ────────────────────────────────────────────────────────────
 
 class _FeedPostData {
   final String id, userId, username, displayName, imageUrl, caption;
+  final String? avatarUrl;
   final int likes, comments;
   final bool isLiked;
   final String timeAgo, camera, exifShort;
@@ -224,6 +225,7 @@ class _FeedPostData {
     required this.userId,
     required this.username,
     required this.displayName,
+    this.avatarUrl,
     required this.imageUrl,
     required this.caption,
     required this.likes,
@@ -239,6 +241,7 @@ class _FeedPostData {
     final profile = row['profiles'] as Map<String, dynamic>?;
     final username = profile?['username'] as String? ?? 'photographer';
     final fullName = profile?['full_name'] as String?;
+    final avatarUrl = profile?['avatar_url'] as String?;
     final title = row['title'] as String? ?? '';
     final caption = row['caption'] as String? ?? (row['description'] is String ? row['description'] as String : '');
     final camera = row['camera'] as String? ?? 'Camera';
@@ -251,12 +254,13 @@ class _FeedPostData {
       userId: row['user_id'] as String? ?? '',
       username: username,
       displayName: (fullName != null && fullName.isNotEmpty) ? fullName : username,
+      avatarUrl: avatarUrl,
       imageUrl: row['image_url'] as String? ?? '',
       caption: caption.isNotEmpty ? caption : title,
       likes: row['likes_count'] as int? ?? 0,
       comments: row['comments_count'] as int? ?? 0,
       isLiked: false,
-      timeAgo: 'recent',
+      timeAgo: _computeTimeAgo(row['created_at']),
       camera: camera,
       exifShort: [
         if (focalLength != null && focalLength.isNotEmpty) '${focalLength}mm',
@@ -265,6 +269,23 @@ class _FeedPostData {
       ].join(' · '),
       aspect: 4 / 5,
     );
+  }
+
+  static String _computeTimeAgo(dynamic createdAt) {
+    if (createdAt == null) return '';
+    try {
+      final dt = DateTime.parse(createdAt as String);
+      final diff = DateTime.now().toUtc().difference(dt);
+      if (diff.inMinutes < 1) return 'just now';
+      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+      if (diff.inHours < 24) return '${diff.inHours}h ago';
+      if (diff.inDays < 7) return '${diff.inDays}d ago';
+      if (diff.inDays < 30) return '${(diff.inDays / 7).floor()}w ago';
+      if (diff.inDays < 365) return '${(diff.inDays / 30).floor()}mo ago';
+      return '${(diff.inDays / 365).floor()}y ago';
+    } catch (_) {
+      return '';
+    }
   }
 }
 
@@ -543,35 +564,41 @@ class _PostHeader extends StatelessWidget {
           GestureDetector(
             onTap: () => context.push('/u/${post.username}'),
             child: Container(
-            width: 38,
-            height: 38,
-            padding: const EdgeInsets.all(1.5),
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [AppColors.primary, AppColors.primaryDim],
+              width: 38,
+              height: 38,
+              padding: const EdgeInsets.all(1.5),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [AppColors.primary, AppColors.primaryDim],
+                ),
+              ),
+              child: CircleAvatar(
+                backgroundColor: AppColors.surfaceContainerHigh,
+                backgroundImage: post.avatarUrl != null && post.avatarUrl!.isNotEmpty
+                    ? NetworkImage(post.avatarUrl!)
+                    : null,
+                child: post.avatarUrl == null || post.avatarUrl!.isEmpty
+                    ? Text(
+                        post.displayName.isNotEmpty ? post.displayName[0].toUpperCase() : '?',
+                        style: AppTextStyles.label.copyWith(color: AppColors.primary),
+                      )
+                    : null,
               ),
             ),
-            child: CircleAvatar(
-              backgroundColor: AppColors.surfaceContainerHigh,
-              child: Text(
-                post.displayName.isNotEmpty ? post.displayName[0] : '?',
-                style: AppTextStyles.label.copyWith(color: AppColors.primary),
-              ),
-            ),
-          ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: GestureDetector(
               onTap: () => context.push('/u/${post.username}'),
               child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(post.displayName, style: AppTextStyles.label),
-                Text(post.timeAgo, style: AppTextStyles.caption),
-              ],
-            ),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(post.displayName, style: AppTextStyles.label),
+                  if (post.timeAgo.isNotEmpty)
+                    Text(post.timeAgo, style: AppTextStyles.caption),
+                ],
+              ),
             ),
           ),
           IconButton(
